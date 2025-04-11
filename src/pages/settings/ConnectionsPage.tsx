@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabaseClient } from "@/hooks/useSupabase";
@@ -61,6 +62,8 @@ const ConnectionsPage = () => {
         } else {
           setStores(data || []);
         }
+      } catch (error) {
+        console.error("Error in fetchStores:", error);
       } finally {
         setIsLoading(false);
       }
@@ -99,7 +102,7 @@ const ConnectionsPage = () => {
           description: "Failed to add store",
           variant: "destructive",
         });
-      } else {
+      } else if (data) {
         setStores([...stores, data]);
         setNewStoreName("");
         setNewStorePlatform("");
@@ -108,6 +111,8 @@ const ConnectionsPage = () => {
           description: "Store added successfully",
         });
       }
+    } catch (error) {
+      console.error("Error in handleAddStore:", error);
     } finally {
       setIsAddingStore(false);
     }
@@ -198,7 +203,7 @@ const ConnectionsPage = () => {
                     <TableCell>{connection.platform}</TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="text-amber-600 bg-amber-100">
-                        {connection.status === 'connected' ? 'Active' : 'Pending'}
+                        {connection.status === 'active' ? 'Active' : 'Pending'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">

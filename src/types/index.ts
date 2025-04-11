@@ -16,15 +16,15 @@ export interface User {
 }
 
 // Store Types
-export type Platform = 'shopify' | 'mirakl';
-export type StoreStatus = 'active' | 'disconnected' | 'error';
+export type Platform = 'shopify' | 'mirakl' | string;
+export type StoreStatus = 'active' | 'pending' | 'disconnected' | 'error';
 
 export interface Store {
   id: string;
   user_id: string;
   platform: Platform;
   store_name: string;
-  domain: string;
+  domain: string | null;
   api_key: string | null;
   access_token: string | null;
   status: StoreStatus;

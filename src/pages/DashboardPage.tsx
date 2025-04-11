@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -6,7 +5,7 @@ import { supabaseClient } from "@/hooks/useSupabase";
 import { StatCard } from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Box, DollarSign, PackageOpen, ShoppingCart, TrendingUp, Zap } from "lucide-react";
+import { BarChart, Package, DollarSign, PackageOpen, ShoppingCart, TrendingUp, Zap } from "lucide-react";
 import { SyncLog } from "@/types";
 
 const DashboardPage = () => {
@@ -130,7 +129,7 @@ const DashboardPage = () => {
         <StatCard
           title="Total Products"
           value={stats.totalProducts}
-          icon={Box}
+          icon={Package}
           onClick={() => window.location.href = "/products"}
         />
         <StatCard

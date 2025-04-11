@@ -76,21 +76,60 @@ export function AuthProvider({
         throw error;
       }
 
-      setUserDetails({
-        role: data.role as UserRole,
-        planType: data.plan_type as PlanType,
-        name: data.name,
-        avatarUrl: data.avatar_url,
-      });
+      if (data) {
+        setUserDetails({
+          role: data.role as UserRole,
+          planType: data.plan_type as PlanType,
+          name: data.name,
+          avatarUrl: data.avatar_url,
+        });
+      } else {
+        // This could happen if the trigger to create the user record failed
+        console.warn('No user details found, creating default profile');
+        await createDefaultUserProfile(userId);
+      }
     } catch (error) {
       console.error('Error fetching user details:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load user profile. Please refresh the page.",
-        variant: "destructive",
-      });
+      // If the user record doesn't exist yet, create it
+      if (error instanceof Error && error.message.includes('No rows')) {
+        await createDefaultUserProfile(userId);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load user profile. Please refresh the page.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const createDefaultUserProfile = async (userId: string) => {
+    try {
+      const { error } = await supabaseClient
+        .from('users')
+        .insert([
+          { 
+            id: userId,
+            role: 'merchant',
+            plan_type: 'free',
+            name: user?.email?.split('@')[0] || 'User'
+          }
+        ]);
+
+      if (error) {
+        throw error;
+      }
+
+      setUserDetails({
+        role: 'merchant' as UserRole,
+        planType: 'free' as PlanType,
+        name: user?.email?.split('@')[0] || 'User',
+        avatarUrl: null,
+      });
+    } catch (error) {
+      console.error('Error creating default user profile:', error);
     }
   };
 

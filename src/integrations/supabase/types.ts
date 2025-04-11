@@ -9,7 +9,112 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      stores: {
+        Row: {
+          access_token: string | null
+          api_key: string | null
+          created_at: string
+          domain: string | null
+          id: string
+          platform: string
+          status: string
+          store_name: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          api_key?: string | null
+          created_at?: string
+          domain?: string | null
+          id?: string
+          platform: string
+          status?: string
+          store_name: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          api_key?: string | null
+          created_at?: string
+          domain?: string | null
+          id?: string
+          platform?: string
+          status?: string
+          store_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stores_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usage_log: {
+        Row: {
+          action_count: number
+          date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_count?: number
+          date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_count?: number
+          date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          name: string | null
+          plan_type: string
+          profile_description: string | null
+          role: string
+          stripe_customer_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id: string
+          name?: string | null
+          plan_type?: string
+          profile_description?: string | null
+          role?: string
+          stripe_customer_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          name?: string | null
+          plan_type?: string
+          profile_description?: string | null
+          role?: string
+          stripe_customer_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

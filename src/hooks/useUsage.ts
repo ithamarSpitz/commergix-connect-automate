@@ -25,48 +25,59 @@ export function useUsage() {
       // Get current date in YYYY-MM-DD format
       const today = new Date().toISOString().split('T')[0];
 
-      // Fetch usage from database
-      const { data, error } = await supabaseClient
-        .from('usage_log')
-        .select('action_count')
-        .eq('user_id', user.id)
-        .eq('date', today)
-        .single();
+      try {
+        // Fetch usage from database
+        const { data, error } = await supabaseClient
+          .from('usage_log')
+          .select('action_count')
+          .eq('user_id', user.id)
+          .eq('date', today)
+          .single();
 
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 means no rows returned
-        console.error('Error fetching usage:', error);
-        throw error;
+        if (error && error.code !== 'PGRST116') {
+          // PGRST116 means no rows returned
+          console.error('Error fetching usage:', error);
+          throw error;
+        }
+
+        const currentUsage = data?.action_count || 0;
+
+        // Define limits based on plan type
+        let limit = 0;
+        let isLimited = true;
+
+        switch (planType as PlanType) {
+          case 'free':
+            limit = 100;
+            break;
+          case 'paygo':
+            limit = Infinity;
+            isLimited = false;
+            break;
+          case 'pro':
+            limit = Infinity;
+            isLimited = false;
+            break;
+          default:
+            limit = 100;
+        }
+
+        return {
+          currentUsage,
+          limit,
+          percentUsed: limit === Infinity ? 0 : Math.min(100, (currentUsage / limit) * 100),
+          isLimited,
+        };
+      } catch (error) {
+        console.error('Error in useUsage:', error);
+        // Return default values if there's an error
+        return {
+          currentUsage: 0,
+          limit: planType === 'free' ? 100 : Infinity,
+          percentUsed: 0,
+          isLimited: planType === 'free',
+        };
       }
-
-      const currentUsage = data?.action_count || 0;
-
-      // Define limits based on plan type
-      let limit = 0;
-      let isLimited = true;
-
-      switch (planType as PlanType) {
-        case 'free':
-          limit = 100;
-          break;
-        case 'paygo':
-          limit = Infinity;
-          isLimited = false;
-          break;
-        case 'pro':
-          limit = Infinity;
-          isLimited = false;
-          break;
-        default:
-          limit = 100;
-      }
-
-      return {
-        currentUsage,
-        limit,
-        percentUsed: limit === Infinity ? 0 : Math.min(100, (currentUsage / limit) * 100),
-        isLimited,
-      };
     },
     enabled: !!user,
   });

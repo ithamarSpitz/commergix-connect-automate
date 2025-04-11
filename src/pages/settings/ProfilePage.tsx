@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -21,18 +22,19 @@ const ProfilePage = () => {
     name: "",
     email: "",
     avatarUrl: "",
+    description: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (userDetails) {
-      // Fix the property name from profileDescription to name:
-      const { name, avatarUrl, role, planType } = userDetails;
+      const { name, avatarUrl } = userDetails;
       setFormData({
         name: name || "",
         email: user?.email || "",
         avatarUrl: avatarUrl || "",
+        description: "", // Add a description field
       });
     }
   }, [user, userDetails]);
@@ -45,6 +47,8 @@ const ProfilePage = () => {
   };
 
   const handleUpdateProfile = async () => {
+    if (!user) return;
+    
     setIsLoading(true);
     try {
       const { error } = await supabaseClient
@@ -52,8 +56,9 @@ const ProfilePage = () => {
         .update({
           name: formData.name,
           avatar_url: formData.avatarUrl,
+          profile_description: formData.description,
         })
-        .eq("id", user?.id);
+        .eq("id", user.id);
 
       if (error) {
         throw error;
@@ -124,12 +129,11 @@ const ProfilePage = () => {
           </div>
           <div className="grid gap-2">
             <Label htmlFor="description">Description</Label>
-            {/* And also update the reference later in the code */}
             <Textarea 
               id="description"
               placeholder="Tell us about yourself"
-              value={formData.name || ''}
-              onChange={(e) => handleInputChange('name', e.target.value)}
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
             />
           </div>
           <div>
