@@ -4,89 +4,63 @@ import { useAuth } from "@/context/AuthContext";
 import { supabaseClient } from "@/hooks/useSupabase";
 import { Store, StoreStatus } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Plus, RefreshCw, Trash } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { StoreTable } from "@/components/stores/StoreTable";
+import { AddStoreForm } from "@/components/stores/AddStoreForm";
 
 const ConnectionsPage = () => {
   const { user } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingStore, setIsAddingStore] = useState(false);
-  const [newStoreName, setNewStoreName] = useState("");
-  const [newStorePlatform, setNewStorePlatform] = useState("");
   const { toast } = useToast();
   
   useEffect(() => {
-    const fetchStores = async () => {
-      if (!user) return;
-      
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabaseClient
-          .from("stores")
-          .select("*")
-          .eq("user_id", user.id);
-        
-        if (error) {
-          console.error("Error fetching stores:", error);
-          toast({
-            title: "Error",
-            description: "Failed to fetch stores",
-            variant: "destructive",
-          });
-        } else {
-          // Convert database records to Store type
-          const typedStores: Store[] = data?.map(store => ({
-            id: store.id,
-            user_id: store.user_id,
-            platform: store.platform,
-            store_name: store.store_name,
-            domain: store.domain,
-            api_key: store.api_key,
-            access_token: store.access_token,
-            status: store.status as StoreStatus,
-            created_at: store.created_at
-          })) || [];
-          
-          setStores(typedStores);
-        }
-      } catch (error) {
-        console.error("Error in fetchStores:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     fetchStores();
   }, [user]);
   
-  const handleAddStore = async () => {
-    if (!user || !newStoreName || !newStorePlatform) {
+  const fetchStores = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabaseClient
+        .from("stores")
+        .select("*")
+        .eq("user_id", user.id);
+      
+      if (error) {
+        console.error("Error fetching stores:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch stores",
+          variant: "destructive",
+        });
+      } else {
+        // Convert database records to Store type
+        const typedStores: Store[] = data?.map(store => ({
+          id: store.id,
+          user_id: store.user_id,
+          platform: store.platform,
+          store_name: store.store_name,
+          domain: store.domain,
+          api_key: store.api_key,
+          access_token: store.access_token,
+          status: store.status as StoreStatus,
+          created_at: store.created_at
+        })) || [];
+        
+        setStores(typedStores);
+      }
+    } catch (error) {
+      console.error("Error in fetchStores:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleAddStore = async (storeName: string, platform: string) => {
+    if (!user || !storeName || !platform) {
       toast({
         title: "Error",
         description: "Please fill all fields",
@@ -101,8 +75,8 @@ const ConnectionsPage = () => {
         .from("stores")
         .insert([{
           user_id: user.id,
-          store_name: newStoreName,
-          platform: newStorePlatform,
+          store_name: storeName,
+          platform: platform,
           status: "pending",
         }])
         .select("*")
@@ -130,8 +104,6 @@ const ConnectionsPage = () => {
         };
         
         setStores([...stores, newStore]);
-        setNewStoreName("");
-        setNewStorePlatform("");
         toast({
           title: "Store Added",
           description: "Store added successfully",
@@ -209,107 +181,17 @@ const ConnectionsPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <p>Loading stores...</p>
-          ) : (
-            <Table>
-              <TableCaption>A list of your connected stores.</TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Platform</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stores.map((connection) => (
-                  <TableRow key={connection.id}>
-                    <TableCell>{connection.store_name}</TableCell>
-                    <TableCell>{connection.platform}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="text-amber-600 bg-amber-100">
-                        {connection.status === 'active' ? 'Active' : 'Pending'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSyncStore(connection.id)}
-                      >
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Sync
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-red-500">
-                            <Trash className="mr-2 h-4 w-4" />
-                            Delete
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete your store
-                              and remove your data from our servers.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteStore(connection.id)}>
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow>
-                  <TableCell colSpan={4}>
-                    Total {stores.length} store(s) connected.
-                  </TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
-          )}
+          <StoreTable 
+            stores={stores}
+            isLoading={isLoading}
+            onSyncStore={handleSyncStore}
+            onDeleteStore={handleDeleteStore}
+          />
           
-          <div className="mt-4 border rounded-md p-4">
-            <h4 className="mb-2 font-semibold">Add New Store</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="storeName">Store Name</Label>
-                <Input
-                  type="text"
-                  id="storeName"
-                  placeholder="My Store"
-                  value={newStoreName}
-                  onChange={(e) => setNewStoreName(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="storePlatform">Platform</Label>
-                <Input
-                  type="text"
-                  id="storePlatform"
-                  placeholder="Shopify"
-                  value={newStorePlatform}
-                  onChange={(e) => setNewStorePlatform(e.target.value)}
-                />
-              </div>
-            </div>
-            <Button
-              className="mt-4"
-              onClick={handleAddStore}
-              disabled={isAddingStore}
-            >
-              {isAddingStore ? "Adding..." : "Add Store"}
-            </Button>
-          </div>
+          <AddStoreForm 
+            onAddStore={handleAddStore}
+            isAddingStore={isAddingStore}
+          />
         </CardContent>
       </Card>
     </div>
