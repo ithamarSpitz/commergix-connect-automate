@@ -24,6 +24,7 @@ import BillingPage from "./pages/settings/BillingPage";
 import ProfilePage from "./pages/settings/ProfilePage";
 import AdminPage from "./pages/AdminPage";
 import NotFound from "./pages/NotFound";
+import AuthCallback from "./pages/AuthCallback"; // Add our new auth callback page
 
 // Auth-protected route wrapper
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -49,6 +50,7 @@ const App = () => {
             <Routes>
               {/* Public routes */}
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               
               {/* Authenticated Routes */}
               <Route element={<ProtectedRoute />}>

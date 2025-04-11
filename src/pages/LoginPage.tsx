@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -20,7 +19,6 @@ const LoginPage = () => {
   const location = useLocation();
   const { toast } = useToast();
   
-  // If user is already logged in, redirect to the intended page or dashboard
   useEffect(() => {
     if (user) {
       const from = location.state?.from?.pathname || "/dashboard";
@@ -75,6 +73,7 @@ const LoginPage = () => {
           data: {
             name,
           },
+          emailRedirectTo: window.location.origin + "/auth/callback",
         },
       });
       
