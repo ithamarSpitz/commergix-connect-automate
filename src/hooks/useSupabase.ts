@@ -1,30 +1,20 @@
 
-import { createClient } from '@supabase/supabase-js';
 import { useState, useEffect } from 'react';
-
-// Create a singleton instance of the Supabase client
-const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY as string;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    'Missing Supabase URL or anonymous key. Make sure to set VITE_PUBLIC_SUPABASE_URL and VITE_PUBLIC_SUPABASE_ANON_KEY environment variables.'
-  );
-}
-
-export const supabaseClient = createClient(
-  supabaseUrl || '',
-  supabaseAnonKey || ''
-);
+import { supabase } from "@/integrations/supabase/client";
 
 export function useSupabase() {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    if (supabaseUrl && supabaseAnonKey) {
+    // Check if supabase client is initialized
+    if (supabase) {
       setIsReady(true);
     }
   }, []);
 
-  return { supabase: supabaseClient, isReady };
+  return { supabase, isReady };
 }
+
+// Export the supabaseClient for backward compatibility
+// This will be used by existing code that imports supabaseClient directly
+export const supabaseClient = supabase;

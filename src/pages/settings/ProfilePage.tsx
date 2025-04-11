@@ -1,125 +1,144 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { User, Upload } from "lucide-react";
+import { supabaseClient } from "@/hooks/useSupabase";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
 
 const ProfilePage = () => {
   const { user, userDetails } = useAuth();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(false);
-  
   const [formData, setFormData] = useState({
-    name: userDetails?.name || '',
-    profileDescription: userDetails?.profileDescription || '',
+    name: "",
+    email: "",
+    avatarUrl: "",
   });
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (userDetails) {
+      // Fix the property name from profileDescription to name:
+      const { name, avatarUrl, role, planType } = userDetails;
+      setFormData({
+        name: name || "",
+        email: user?.email || "",
+        avatarUrl: avatarUrl || "",
+      });
+    }
+  }, [user, userDetails]);
+
+  const handleInputChange = (key: string, value: string) => {
+    setFormData({
+      ...formData,
+      [key]: value,
+    });
   };
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+
+  const handleUpdateProfile = async () => {
     setIsLoading(true);
-    
     try {
-      // Simulating an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      const { error } = await supabaseClient
+        .from("users")
+        .update({
+          name: formData.name,
+          avatar_url: formData.avatarUrl,
+        })
+        .eq("id", user?.id);
+
+      if (error) {
+        throw error;
+      }
+
       toast({
         title: "Profile Updated",
         description: "Your profile has been updated successfully.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile:", error);
-      
       toast({
-        title: "Update Failed",
-        description: "There was an error updating your profile.",
+        title: "Error",
+        description: error.message || "Failed to update profile.",
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">Profile</h3>
-        <p className="text-sm text-muted-foreground">
-          Update your personal information and profile picture.
-        </p>
-      </div>
-      
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={userDetails?.avatarUrl || ''} alt={userDetails?.name || 'User'} />
-              <AvatarFallback className="text-lg">
-                <User className="h-10 w-10" />
-              </AvatarFallback>
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile Information</CardTitle>
+          <CardDescription>
+            Update your profile information here.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6">
+          <div className="flex items-center space-x-4">
+            <Avatar>
+              <AvatarImage src={formData.avatarUrl} alt={formData.name} />
+              <AvatarFallback>{formData.name?.charAt(0)}</AvatarFallback>
             </Avatar>
-            
-            <div>
-              <Button type="button" variant="outline" size="sm">
-                <Upload className="mr-2 h-4 w-4" />
-                Change Avatar
-              </Button>
-              <p className="text-xs text-muted-foreground mt-1">
-                JPG, PNG or GIF. 1MB max.
-              </p>
+            <div className="space-y-1">
+              <h4 className="text-sm font-medium leading-none">{formData.name}</h4>
+              <p className="text-sm text-muted-foreground">{formData.email}</p>
             </div>
           </div>
-          
+          <div className="grid gap-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              placeholder="Your name"
+              value={formData.name}
+              onChange={(e) => handleInputChange("name", e.target.value)}
+            />
+          </div>
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
-              value={user?.email || ''}
+              placeholder="Your email address"
+              value={formData.email}
               disabled
-              className="bg-muted"
             />
-            <p className="text-xs text-muted-foreground">
-              Your email cannot be changed.
-            </p>
           </div>
-          
           <div className="grid gap-2">
-            <Label htmlFor="name">Full Name</Label>
+            <Label htmlFor="avatar">Avatar URL</Label>
             <Input
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
+              id="avatar"
+              placeholder="URL to your avatar image"
+              value={formData.avatarUrl}
+              onChange={(e) => handleInputChange("avatarUrl", e.target.value)}
             />
           </div>
-          
           <div className="grid gap-2">
-            <Label htmlFor="profileDescription">Profile Description</Label>
-            <Textarea
-              id="profileDescription"
-              name="profileDescription"
-              value={formData.profileDescription}
-              onChange={handleChange}
-              rows={4}
-              placeholder="Tell us about yourself or your business"
+            <Label htmlFor="description">Description</Label>
+            {/* And also update the reference later in the code */}
+            <Textarea 
+              id="description"
+              placeholder="Tell us about yourself"
+              value={formData.name || ''}
+              onChange={(e) => handleInputChange('name', e.target.value)}
             />
           </div>
-        </div>
-        
-        <Button type="submit" disabled={isLoading}>
-          {isLoading ? "Saving..." : "Save Changes"}
-        </Button>
-      </form>
+          <div>
+            <Button onClick={handleUpdateProfile} disabled={isLoading}>
+              {isLoading ? "Updating..." : "Update Profile"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -1,240 +1,286 @@
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { supabaseClient } from "@/hooks/useSupabase";
+import { Store } from "@/types";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useShopifyOAuth } from "@/hooks/useShopifyOAuth";
-import { ExternalLink, Power, RefreshCw, Store, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Plus, RefreshCw, Trash } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const ConnectionsPage = () => {
-  const [shopDomain, setShopDomain] = useState("");
-  const [mirakleApiKey, setMirakleApiKey] = useState("");
-  const { initiateOAuth, isLoading } = useShopifyOAuth();
+  const { user } = useAuth();
+  const [stores, setStores] = useState<Store[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAddingStore, setIsAddingStore] = useState(false);
+  const [newStoreName, setNewStoreName] = useState("");
+  const [newStorePlatform, setNewStorePlatform] = useState("");
+  const { toast } = useToast();
   
-  // Mock data for demonstration
-  const connectedStores = [
-    {
-      id: "store1",
-      name: "My Awesome Shop",
-      platform: "shopify",
-      domain: "awesome-shop.myshopify.com",
-      status: "active",
-      lastSync: "2023-04-10T14:32:00Z",
-    },
-  ];
+  useEffect(() => {
+    const fetchStores = async () => {
+      if (!user) return;
+      
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabaseClient
+          .from("stores")
+          .select("*")
+          .eq("user_id", user.id);
+        
+        if (error) {
+          console.error("Error fetching stores:", error);
+          toast({
+            title: "Error",
+            description: "Failed to fetch stores",
+            variant: "destructive",
+          });
+        } else {
+          setStores(data || []);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchStores();
+  }, [user]);
   
-  const syncLogs = [
-    {
-      id: "log1",
-      type: "orders",
-      details: "Successfully synced 5 new orders from Shopify",
-      status: "success",
-      timestamp: "2023-04-10T14:32:00Z",
-    },
-    {
-      id: "log2",
-      type: "products",
-      details: "Updated inventory for 12 products",
-      status: "success",
-      timestamp: "2023-04-10T13:15:00Z",
-    },
-    {
-      id: "log3",
-      type: "products",
-      details: "Failed to sync product images",
-      status: "error",
-      timestamp: "2023-04-09T16:45:00Z",
-    },
-  ];
-  
-  const handleShopifyConnect = () => {
-    initiateOAuth(shopDomain);
-  };
-  
-  const handleMirakleConnect = () => {
-    console.log("Connecting to Mirakl with API key:", mirakleApiKey);
-    // Implement Mirakl connection logic
-  };
-  
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "active":
-        return <Badge className="bg-green-500">Active</Badge>;
-      case "error":
-        return <Badge variant="destructive">Error</Badge>;
-      case "pending":
-        return <Badge variant="secondary">Pending</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+  const handleAddStore = async () => {
+    if (!user || !newStoreName || !newStorePlatform) {
+      toast({
+        title: "Error",
+        description: "Please fill all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsAddingStore(true);
+    try {
+      const { data, error } = await supabaseClient
+        .from("stores")
+        .insert([{
+          user_id: user.id,
+          store_name: newStoreName,
+          platform: newStorePlatform,
+          status: "pending",
+        }])
+        .select("*")
+        .single();
+      
+      if (error) {
+        console.error("Error adding store:", error);
+        toast({
+          title: "Error",
+          description: "Failed to add store",
+          variant: "destructive",
+        });
+      } else {
+        setStores([...stores, data]);
+        setNewStoreName("");
+        setNewStorePlatform("");
+        toast({
+          title: "Store Added",
+          description: "Store added successfully",
+        });
+      }
+    } finally {
+      setIsAddingStore(false);
     }
   };
   
-  const getSyncStatusBadge = (status) => {
-    switch (status) {
-      case "success":
-        return <Badge className="bg-green-500">Success</Badge>;
-      case "error":
-        return <Badge variant="destructive">Error</Badge>;
-      case "partial":
-        return <Badge variant="warning">Partial</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+  const handleDeleteStore = async (storeId: string) => {
+    try {
+      const { error } = await supabaseClient
+        .from("stores")
+        .delete()
+        .eq("id", storeId);
+      
+      if (error) {
+        console.error("Error deleting store:", error);
+        toast({
+          title: "Error",
+          description: "Failed to delete store",
+          variant: "destructive",
+        });
+      } else {
+        setStores(stores.filter(store => store.id !== storeId));
+        toast({
+          title: "Store Deleted",
+          description: "Store deleted successfully",
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting store:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete store",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleSyncStore = async (storeId: string) => {
+    try {
+      // TODO: Implement sync logic
+      toast({
+        title: "Sync Initiated",
+        description: "Sync initiated for store",
+      });
+    } catch (error) {
+      console.error("Error syncing store:", error);
+      toast({
+        title: "Error",
+        description: "Failed to sync store",
+        variant: "destructive",
+      });
     }
   };
   
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Store Connections</h3>
-        <p className="text-sm text-muted-foreground">
-          Connect your e-commerce platforms to sync products and orders.
+        <h2 className="text-2xl font-bold tracking-tight">Connections</h2>
+        <p className="text-muted-foreground">
+          Manage your store connections.
         </p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Shopify</CardTitle>
-                <CardDescription>Connect your Shopify store</CardDescription>
-              </div>
-              <Store className="h-8 w-8 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Input
-                placeholder="your-store.myshopify.com"
-                value={shopDomain}
-                onChange={(e) => setShopDomain(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter your Shopify store domain to connect
-              </p>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button 
-              onClick={handleShopifyConnect} 
-              disabled={!shopDomain || isLoading}
-              className="w-full"
-            >
-              {isLoading ? "Connecting..." : "Connect Shopify"}
-            </Button>
-          </CardFooter>
-        </Card>
-        
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Mirakl</CardTitle>
-                <CardDescription>Connect your Mirakl marketplace</CardDescription>
-              </div>
-              <Store className="h-8 w-8 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Input
-                type="password"
-                placeholder="Enter your Mirakl API key"
-                value={mirakleApiKey}
-                onChange={(e) => setMirakleApiKey(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                You can find your API key in your Mirakl seller dashboard
-              </p>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button 
-              onClick={handleMirakleConnect} 
-              disabled={!mirakleApiKey}
-              className="w-full"
-            >
-              Connect Mirakl
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-      
-      <div>
-        <h3 className="text-lg font-medium mb-4">Connected Stores</h3>
-        <div className="space-y-4">
-          {connectedStores.length > 0 ? (
-            connectedStores.map((store) => (
-              <Card key={store.id}>
-                <CardContent className="p-4">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-base font-medium">{store.name}</h4>
-                        {getStatusBadge(store.status)}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {store.platform === "shopify" ? "Shopify" : "Mirakl"} • {store.domain}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Last synced: {new Date(store.lastSync).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Sync Now
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Open Store
-                      </Button>
-                      <Button variant="outline" size="sm" className="text-amber-500 border-amber-500">
-                        <Power className="mr-2 h-4 w-4" />
-                        Disconnect
-                      </Button>
-                      <Button variant="outline" size="sm" className="text-red-500 border-red-500">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Stores</CardTitle>
+          <CardDescription>
+            Manage your connected stores.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <p>Loading stores...</p>
           ) : (
-            <Alert>
-              <AlertDescription>
-                You haven't connected any stores yet. Connect a store to get started.
-              </AlertDescription>
-            </Alert>
+            <Table>
+              <TableCaption>A list of your connected stores.</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Platform</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {stores.map((connection) => (
+                  <TableRow key={connection.id}>
+                    <TableCell>{connection.store_name}</TableCell>
+                    <TableCell>{connection.platform}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="text-amber-600 bg-amber-100">
+                        {connection.status === 'connected' ? 'Active' : 'Pending'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSyncStore(connection.id)}
+                      >
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Sync
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="text-red-500">
+                            <Trash className="mr-2 h-4 w-4" />
+                            Delete
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete your store
+                              and remove your data from our servers.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteStore(connection.id)}>
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={4}>
+                    Total {stores.length} store(s) connected.
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
           )}
-        </div>
-      </div>
-      
-      <div>
-        <h3 className="text-lg font-medium mb-4">Recent Sync Activity</h3>
-        <Card>
-          <CardContent className="p-4">
-            <div className="space-y-4">
-              {syncLogs.map((log) => (
-                <div key={log.id} className="flex justify-between items-start pb-4 border-b last:border-0 last:pb-0">
-                  <div>
-                    <p className="font-medium text-sm">{log.details}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {log.type} • {new Date(log.timestamp).toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    {getSyncStatusBadge(log.status)}
-                  </div>
-                </div>
-              ))}
+          
+          <div className="mt-4 border rounded-md p-4">
+            <h4 className="mb-2 font-semibold">Add New Store</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="storeName">Store Name</Label>
+                <Input
+                  type="text"
+                  id="storeName"
+                  placeholder="My Store"
+                  value={newStoreName}
+                  onChange={(e) => setNewStoreName(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="storePlatform">Platform</Label>
+                <Input
+                  type="text"
+                  id="storePlatform"
+                  placeholder="Shopify"
+                  value={newStorePlatform}
+                  onChange={(e) => setNewStorePlatform(e.target.value)}
+                />
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <Button
+              className="mt-4"
+              onClick={handleAddStore}
+              disabled={isAddingStore}
+            >
+              {isAddingStore ? "Adding..." : "Add Store"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

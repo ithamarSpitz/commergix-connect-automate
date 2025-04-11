@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { MainNav } from "@/components/MainNav";
@@ -15,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, User, Bell } from "lucide-react";
 import { UsageBadge } from "@/components/UsageBadge";
+import { Package } from "lucide-react";
 
 export function Header() {
   const { user, userDetails, signOut } = useAuth();
@@ -40,7 +40,7 @@ export function Header() {
       <div className="container flex h-16 items-center justify-between py-4">
         <div className="flex items-center gap-4">
           <Link to="/" className="flex items-center space-x-2">
-            <Box className="h-8 w-8 text-primary" />
+            <Package className="h-5 w-5" />
             <span className="font-bold text-xl hidden md:inline-block">Commergix</span>
           </Link>
           <MainNav className="mx-6 hidden md:flex" />
