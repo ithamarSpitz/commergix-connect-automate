@@ -17,7 +17,7 @@ export interface User {
 
 // Store Types
 export type Platform = 'shopify' | 'mirakl' | string;
-export type StoreStatus = 'active' | 'pending' | 'disconnected' | 'error';
+export type StoreStatus = 'active' | 'pending' | 'disconnected' | 'error' | string;
 
 export interface Store {
   id: string;

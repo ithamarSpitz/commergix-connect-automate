@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -35,19 +36,8 @@ const DashboardPage = () => {
           setStats(statsData);
         }
         
-        // Fetch recent sync logs
-        const { data: syncData, error: syncError } = await supabaseClient
-          .from("sync_logs")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("timestamp", { ascending: false })
-          .limit(5);
-        
-        if (syncError) {
-          console.error("Error fetching sync logs:", syncError);
-        } else if (syncData) {
-          setSyncLogs(syncData);
-        }
+        // Don't try to fetch sync_logs from database as the table doesn't exist yet
+        // We'll use demo data instead
       } catch (error) {
         console.error("Dashboard data fetch error:", error);
       } finally {

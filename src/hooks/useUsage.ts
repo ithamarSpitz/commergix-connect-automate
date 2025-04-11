@@ -32,10 +32,9 @@ export function useUsage() {
           .select('action_count')
           .eq('user_id', user.id)
           .eq('date', today)
-          .single();
+          .maybeSingle();
 
-        if (error && error.code !== 'PGRST116') {
-          // PGRST116 means no rows returned
+        if (error) {
           console.error('Error fetching usage:', error);
           throw error;
         }

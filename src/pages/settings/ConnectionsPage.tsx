@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabaseClient } from "@/hooks/useSupabase";
-import { Store } from "@/types";
+import { Store, StoreStatus } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,20 @@ const ConnectionsPage = () => {
             variant: "destructive",
           });
         } else {
-          setStores(data || []);
+          // Convert database records to Store type
+          const typedStores: Store[] = data?.map(store => ({
+            id: store.id,
+            user_id: store.user_id,
+            platform: store.platform,
+            store_name: store.store_name,
+            domain: store.domain,
+            api_key: store.api_key,
+            access_token: store.access_token,
+            status: store.status as StoreStatus,
+            created_at: store.created_at
+          })) || [];
+          
+          setStores(typedStores);
         }
       } catch (error) {
         console.error("Error in fetchStores:", error);
@@ -103,7 +116,20 @@ const ConnectionsPage = () => {
           variant: "destructive",
         });
       } else if (data) {
-        setStores([...stores, data]);
+        // Convert the returned data to Store type
+        const newStore: Store = {
+          id: data.id,
+          user_id: data.user_id,
+          platform: data.platform,
+          store_name: data.store_name,
+          domain: data.domain,
+          api_key: data.api_key,
+          access_token: data.access_token,
+          status: data.status as StoreStatus,
+          created_at: data.created_at
+        };
+        
+        setStores([...stores, newStore]);
         setNewStoreName("");
         setNewStorePlatform("");
         toast({
