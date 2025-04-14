@@ -23,6 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ProductFormProps {
   open: boolean;
@@ -32,6 +33,7 @@ interface ProductFormProps {
 
 export const ProductForm = ({ open, setOpen, onAddProduct }: ProductFormProps) => {
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm({
     defaultValues: {
@@ -39,39 +41,47 @@ export const ProductForm = ({ open, setOpen, onAddProduct }: ProductFormProps) =
       price: "",
       sku: "",
       inventory: "",
+      description: "",
       is_shared: false,
     },
   });
 
-  const handleAddProduct = (data) => {
-    // Create a new product with the form data
-    const newProduct = {
-      id: `${Date.now()}`, // Generate a unique ID
-      title: data.title,
-      price: parseFloat(data.price),
-      sku: data.sku,
-      inventory: parseInt(data.inventory),
-      is_shared: data.is_shared,
-      image_url: "https://via.placeholder.com/150",
-      description: "New product",
-      owner_user_id: "123",
-      store_id: null,
-      currency: "USD",
-      created_at: new Date().toISOString(),
-    };
+  const handleAddProduct = async (data) => {
+    setIsSubmitting(true);
     
-    // Add the new product
-    onAddProduct(newProduct);
-    
-    // Show success notification
-    toast({
-      title: "Product Added",
-      description: `${data.title} has been added to your products.`,
-    });
-    
-    // Reset form and close dialog
-    form.reset();
-    setOpen(false);
+    try {
+      // Create a new product with the form data
+      const newProduct: Product = {
+        id: `${Date.now()}`, // This will be replaced by Supabase
+        title: data.title,
+        price: parseFloat(data.price),
+        sku: data.sku,
+        inventory: parseInt(data.inventory),
+        is_shared: data.is_shared,
+        image_url: "https://via.placeholder.com/150",
+        description: data.description || "No description provided",
+        owner_user_id: "123", // This should be the current user's ID in a real app
+        store_id: null,
+        currency: "USD",
+        created_at: new Date().toISOString(),
+      };
+      
+      // Add the new product
+      await onAddProduct(newProduct);
+      
+      // Reset form and close dialog
+      form.reset();
+      setOpen(false);
+    } catch (error) {
+      console.error("Error adding product:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add product. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -139,6 +149,19 @@ export const ProductForm = ({ open, setOpen, onAddProduct }: ProductFormProps) =
             />
             <FormField
               control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Product description" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="is_shared"
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
@@ -161,7 +184,9 @@ export const ProductForm = ({ open, setOpen, onAddProduct }: ProductFormProps) =
               <Button variant="outline" type="button" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Add Product</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Adding..." : "Add Product"}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

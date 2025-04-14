@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -7,63 +7,86 @@ import { Product } from "@/types";
 import { ProductForm } from "@/components/products/ProductForm";
 import { ProductSearch } from "@/components/products/ProductSearch";
 import { ProductList } from "@/components/products/ProductList";
+import { supabase } from "@/integrations/supabase/client";
 
 const ProductsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  
-  // Initial mock data for demonstration
-  const initialProducts = [
-    {
-      id: "1",
-      title: "Classic White T-Shirt",
-      price: 19.99,
-      sku: "TS-001",
-      inventory: 45,
-      is_shared: true,
-      image_url: "https://via.placeholder.com/150",
-      description: "Comfortable cotton t-shirt",
-      owner_user_id: "123",
-      store_id: null,
-      currency: "USD",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "2",
-      title: "Slim Fit Jeans",
-      price: 49.99,
-      sku: "JN-002",
-      inventory: 22,
-      is_shared: false,
-      image_url: "https://via.placeholder.com/150",
-      description: "Classic blue jeans",
-      owner_user_id: "123",
-      store_id: null,
-      currency: "USD",
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: "3",
-      title: "Leather Jacket",
-      price: 199.99,
-      sku: "JK-003",
-      inventory: 8,
-      is_shared: true,
-      image_url: "https://via.placeholder.com/150",
-      description: "Premium leather jacket",
-      owner_user_id: "123",
-      store_id: null,
-      currency: "USD",
-      created_at: new Date().toISOString(),
-    },
-  ];
+  const [products, setProducts] = useState<Product[]>([]);
 
-  // Store products in state so we can update it
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  // Fetch products from Supabase
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        
+        const { data, error } = await supabase
+          .from('products')
+          .select('*');
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          setProducts(data);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load products. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleAddProduct = (newProduct: Product) => {
-    setProducts([...products, newProduct]);
+    fetchProducts();
+  }, [toast]);
+
+  const handleAddProduct = async (newProduct: Product) => {
+    try {
+      // Save product to Supabase
+      const { data, error } = await supabase
+        .from('products')
+        .insert([{
+          title: newProduct.title,
+          description: newProduct.description,
+          price: newProduct.price,
+          currency: newProduct.currency,
+          sku: newProduct.sku,
+          is_shared: newProduct.is_shared,
+          image_url: newProduct.image_url,
+          owner_user_id: newProduct.owner_user_id,
+          store_id: newProduct.store_id
+        }])
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      if (data && data.length > 0) {
+        // Update local state with the new product
+        setProducts([...products, data[0]]);
+        
+        toast({
+          title: "Product Added",
+          description: `${newProduct.title} has been added to your products.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error adding product:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add product. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -78,7 +101,15 @@ const ProductsPage = () => {
       
       <ProductSearch searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       
-      <ProductList products={products} searchQuery={searchQuery} />
+      {loading ? (
+        <div className="text-center py-8">Loading products...</div>
+      ) : products.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          No products found. Add your first product to get started.
+        </div>
+      ) : (
+        <ProductList products={products} searchQuery={searchQuery} />
+      )}
       
       <ProductForm open={open} setOpen={setOpen} onAddProduct={handleAddProduct} />
     </div>
