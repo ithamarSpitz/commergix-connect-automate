@@ -44,6 +44,11 @@ const navItems: NavItem[] = [
     icon: ShoppingCart,
   },
   {
+    title: "Reports",
+    href: "/reports",
+    icon: BarChart3,
+  },
+  {
     title: "Settings",
     href: "/settings",
     icon: Settings,
