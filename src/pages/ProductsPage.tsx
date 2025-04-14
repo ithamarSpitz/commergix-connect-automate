@@ -10,32 +10,32 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { Product } from "@/types";
+import { ProductCard } from "@/components/ProductCard";
 
 const ProductsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   
-  const form = useForm({
-    defaultValues: {
-      title: "",
-      price: "",
-      sku: "",
-      inventory: "",
-      isShared: false,
-    },
-  });
-
-  // Mock data for demonstration
-  const products = [
+  // Initial mock data for demonstration
+  const initialProducts = [
     {
       id: "1",
       title: "Classic White T-Shirt",
       price: 19.99,
       sku: "TS-001",
       inventory: 45,
-      isShared: true,
-      imageUrl: "https://via.placeholder.com/150",
+      is_shared: true,
+      image_url: "https://via.placeholder.com/150",
+      description: "Comfortable cotton t-shirt",
+      owner_user_id: "123",
+      store_id: null,
+      currency: "USD",
+      created_at: new Date().toISOString(),
     },
     {
       id: "2",
@@ -43,8 +43,13 @@ const ProductsPage = () => {
       price: 49.99,
       sku: "JN-002",
       inventory: 22,
-      isShared: false,
-      imageUrl: "https://via.placeholder.com/150",
+      is_shared: false,
+      image_url: "https://via.placeholder.com/150",
+      description: "Classic blue jeans",
+      owner_user_id: "123",
+      store_id: null,
+      currency: "USD",
+      created_at: new Date().toISOString(),
     },
     {
       id: "3",
@@ -52,10 +57,28 @@ const ProductsPage = () => {
       price: 199.99,
       sku: "JK-003",
       inventory: 8,
-      isShared: true,
-      imageUrl: "https://via.placeholder.com/150",
+      is_shared: true,
+      image_url: "https://via.placeholder.com/150",
+      description: "Premium leather jacket",
+      owner_user_id: "123",
+      store_id: null,
+      currency: "USD",
+      created_at: new Date().toISOString(),
     },
   ];
+
+  // Store products in state so we can update it
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+
+  const form = useForm({
+    defaultValues: {
+      title: "",
+      price: "",
+      sku: "",
+      inventory: "",
+      is_shared: false,
+    },
+  });
 
   // Filter products based on search query
   const filteredProducts = searchQuery
@@ -66,12 +89,32 @@ const ProductsPage = () => {
     : products;
     
   const handleAddProduct = (data) => {
-    // For demo purposes, we'll just show a toast notification
-    // In a real app, this would add the product to the database
+    // Create a new product with the form data
+    const newProduct = {
+      id: `${products.length + 1}`,
+      title: data.title,
+      price: parseFloat(data.price),
+      sku: data.sku,
+      inventory: parseInt(data.inventory),
+      is_shared: data.is_shared,
+      image_url: "https://via.placeholder.com/150",
+      description: "New product",
+      owner_user_id: "123",
+      store_id: null,
+      currency: "USD",
+      created_at: new Date().toISOString(),
+    };
+    
+    // Add the new product to the products array
+    setProducts([...products, newProduct]);
+    
+    // Show success notification
     toast({
       title: "Product Added",
       description: `${data.title} has been added to your products.`,
     });
+    
+    // Reset form and close dialog
     form.reset();
     setOpen(false);
   };
@@ -148,6 +191,26 @@ const ProductsPage = () => {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="is_shared"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                      <div className="space-y-0.5">
+                        <FormLabel>Share Product</FormLabel>
+                        <FormDescription className="text-xs">
+                          Make this product available in the marketplace
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
                 <DialogFooter>
                   <Button variant="outline" type="button" onClick={() => setOpen(false)}>
                     Cancel
@@ -179,7 +242,7 @@ const ProductsPage = () => {
             <Card className="overflow-hidden hover:border-primary/50 transition-colors">
               <div className="aspect-video w-full bg-muted">
                 <img
-                  src={product.imageUrl}
+                  src={product.image_url}
                   alt={product.title}
                   className="h-full w-full object-cover"
                 />
@@ -190,7 +253,7 @@ const ProductsPage = () => {
                     <h3 className="font-medium">{product.title}</h3>
                     <p className="text-sm text-muted-foreground">${product.price.toFixed(2)}</p>
                   </div>
-                  {product.isShared && (
+                  {product.is_shared && (
                     <Badge variant="secondary">Shared</Badge>
                   )}
                 </div>
