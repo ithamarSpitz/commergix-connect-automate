@@ -66,11 +66,12 @@ export function AuthProvider({
 
   const fetchUserDetails = async (userId: string) => {
     try {
+      // Use maybeSingle instead of single to handle case where user doesn't exist
       const { data, error } = await supabaseClient
         .from('users')
         .select('role, plan_type, name, avatar_url')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         throw error;
@@ -91,17 +92,27 @@ export function AuthProvider({
     } catch (error) {
       console.error('Error fetching user details:', error);
       // If the user record doesn't exist yet, create it
-      if (error instanceof Error && error.message.includes('No rows')) {
+      if (error instanceof Error && 
+          (error.message.includes('No rows') || 
+           error.message.includes('multiple (or no) rows'))) {
         await createDefaultUserProfile(userId);
       } else {
+        // Show toast but don't block the UI
         toast({
           title: "Error",
-          description: "Failed to load user profile. Please refresh the page.",
+          description: "Failed to load user profile. Using default settings.",
           variant: "destructive",
         });
+        
+        // Set default values anyway so the app can function
+        setUserDetails({
+          role: 'merchant' as UserRole,
+          planType: 'free' as PlanType,
+          name: user?.email?.split('@')[0] || 'User',
+          avatarUrl: null,
+        });
+        setIsLoading(false);
       }
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -119,17 +130,33 @@ export function AuthProvider({
         ]);
 
       if (error) {
-        throw error;
+        console.error('Error creating user profile:', error);
+        // Still set default values to allow app to function
+        setUserDetails({
+          role: 'merchant' as UserRole,
+          planType: 'free' as PlanType,
+          name: user?.email?.split('@')[0] || 'User',
+          avatarUrl: null,
+        });
+      } else {
+        setUserDetails({
+          role: 'merchant' as UserRole,
+          planType: 'free' as PlanType,
+          name: user?.email?.split('@')[0] || 'User',
+          avatarUrl: null,
+        });
       }
-
+    } catch (error) {
+      console.error('Error creating default user profile:', error);
+      // Set default values to allow app to function
       setUserDetails({
         role: 'merchant' as UserRole,
-        planType: 'free' as PlanType,
+        planType: 'free' as PlanType, 
         name: user?.email?.split('@')[0] || 'User',
         avatarUrl: null,
       });
-    } catch (error) {
-      console.error('Error creating default user profile:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
