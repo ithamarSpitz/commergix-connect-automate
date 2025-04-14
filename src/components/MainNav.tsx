@@ -44,6 +44,11 @@ const navItems: NavItem[] = [
     icon: ShoppingCart,
   },
   {
+    title: "Reports",
+    href: "/reports",
+    icon: BarChart3,
+  },
+  {
     title: "Settings",
     href: "/settings",
     icon: Settings,
@@ -63,7 +68,7 @@ interface MainNavProps {
 export function MainNav({ className }: MainNavProps) {
   const location = useLocation();
   const { isAdmin } = useAuth();
-  
+
   return (
     <nav className={cn("flex items-center space-x-4 lg:space-x-6", className)}>
       {navItems

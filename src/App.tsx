@@ -25,6 +25,7 @@ import ProfilePage from "./pages/settings/ProfilePage";
 import AdminPage from "./pages/AdminPage";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback"; // Add our new auth callback page
+import ReportsPage from "@/pages/ReportsPage"; // Added ReportsPage import
 
 // Auth-protected route wrapper
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -51,11 +52,11 @@ const App = () => {
               {/* Public routes */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
-              
+
               {/* Authenticated Routes */}
               <Route element={<ProtectedRoute />}>
                 <Route path="/onboarding/*" element={<OnboardingPage />} />
-                
+
                 <Route element={<Layout />}>
                   <Route path="/" element={<Navigate to="/dashboard" replace />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
@@ -64,22 +65,24 @@ const App = () => {
                   <Route path="/marketplace" element={<MarketplacePage />} />
                   <Route path="/orders" element={<OrdersPage />} />
                   <Route path="/orders/:id" element={<OrderDetailPage />} />
-                  
-                  <Route path="/settings" element={<SettingsPage />}>
+
+                  <Route path="/settings/*" element={<SettingsPage />}>
                     <Route index element={<Navigate to="/settings/profile" replace />} />
                     <Route path="connections" element={<ConnectionsPage />} />
                     <Route path="shipping" element={<ShippingPage />} />
                     <Route path="billing" element={<BillingPage />} />
                     <Route path="profile" element={<ProfilePage />} />
                   </Route>
-                  
+
+                  <Route path="/reports" element={<ReportsPage />} /> {/* Added Reports route */}
+
                   {/* Admin routes */}
                   <Route element={<AdminRoute />}>
                     <Route path="/admin" element={<AdminPage />} />
                   </Route>
                 </Route>
               </Route>
-              
+
               {/* 404 Not Found */}
               <Route path="*" element={<NotFound />} />
             </Routes>
