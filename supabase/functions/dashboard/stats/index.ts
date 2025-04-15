@@ -48,26 +48,33 @@ serve(async (req) => {
         }
       );
     }
-    
-    // Get user's stats data
-    // In a real implementation, you would fetch actual data from the database
-    // For example:
-    // const { data: products } = await supabase
-    //   .from('products')
-    //   .select('*')
-    //   .eq('user_id', userData.user.id);
-    
-    // const { data: orders } = await supabase
-    //   .from('orders')
-    //   .select('*')
-    //   .eq('user_id', userData.user.id);
 
-    // For demo purposes, we'll return mock data
+    // Fetch products data
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select('*')
+      .eq('owner_user_id', userData.user.id);
+    
+    if (productsError) {
+      console.error("Error fetching products:", productsError);
+    }
+    
+    // We would fetch orders from an orders table if it existed
+    // For now, we'll use an empty array to simulate no orders yet
+    const orders = [];
+    
+    // Calculate stats from real data
+    const totalProducts = products?.length || 0;
+    const totalOrders = orders.length || 0;
+    const revenue = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+    const pendingOrders = orders.filter(order => order.status === 'processing').length;
+
+    // Return the actual calculated stats
     const statsData = {
-      totalProducts: 24,
-      totalOrders: 8,
-      revenue: 1249.99,
-      pendingOrders: 3,
+      totalProducts,
+      totalOrders,
+      revenue,
+      pendingOrders,
     };
 
     return new Response(

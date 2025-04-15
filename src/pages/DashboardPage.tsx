@@ -23,6 +23,7 @@ const DashboardPage = () => {
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -43,19 +44,18 @@ const DashboardPage = () => {
             throw new Error("Failed to fetch dashboard statistics");
           } else if (statsData) {
             setStats(statsData);
+            
+            // Check if user has any data
+            const hasNoData = 
+              statsData.totalProducts === 0 && 
+              statsData.totalOrders === 0 && 
+              statsData.revenue === 0;
+              
+            setIsNewUser(hasNoData);
           }
         } catch (error) {
           console.error("Error fetching stats:", error);
-          // Set error but don't stop execution - we'll still show mock sync logs
           setError("Unable to load statistics. Please try again later.");
-          
-          // Use fallback stats data
-          setStats({
-            totalProducts: 0,
-            totalOrders: 0,
-            revenue: 0,
-            pendingOrders: 0,
-          });
         }
         
         // Create example sync logs since the sync_logs table doesn't exist yet
@@ -123,6 +123,16 @@ const DashboardPage = () => {
         <Alert variant="destructive">
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      
+      {isNewUser && !error && (
+        <Alert>
+          <AlertTitle>Welcome to your dashboard!</AlertTitle>
+          <AlertDescription>
+            It looks like you haven't added any products or orders yet. 
+            Get started by adding products or connecting your store.
+          </AlertDescription>
         </Alert>
       )}
       
