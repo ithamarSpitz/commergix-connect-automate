@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/context/AuthContext";
 
 interface ProductFormProps {
   open: boolean;
@@ -34,6 +35,7 @@ interface ProductFormProps {
 export const ProductForm = ({ open, setOpen, onAddProduct }: ProductFormProps) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
   
   const form = useForm({
     defaultValues: {
@@ -60,7 +62,7 @@ export const ProductForm = ({ open, setOpen, onAddProduct }: ProductFormProps) =
         is_shared: data.is_shared,
         image_url: "https://via.placeholder.com/150",
         description: data.description || "No description provided",
-        owner_user_id: "123", // This should be the current user's ID in a real app
+        owner_user_id: user?.id || "",
         store_id: null,
         currency: "USD",
         created_at: new Date().toISOString(),

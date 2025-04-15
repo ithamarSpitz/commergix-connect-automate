@@ -62,7 +62,8 @@ const ProductsPage = () => {
           is_shared: newProduct.is_shared,
           image_url: newProduct.image_url,
           owner_user_id: newProduct.owner_user_id,
-          store_id: newProduct.store_id
+          store_id: newProduct.store_id,
+          inventory: newProduct.inventory
         }])
         .select();
 

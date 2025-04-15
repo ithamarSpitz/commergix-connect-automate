@@ -1,4 +1,3 @@
-
 // User Types
 export type UserRole = 'merchant' | 'admin';
 export type PlanType = 'free' | 'paygo' | 'pro';
@@ -43,6 +42,7 @@ export interface Product {
   sku: string;
   is_shared: boolean;
   image_url: string | null;
+  inventory: number;
   created_at: string;
 }
 

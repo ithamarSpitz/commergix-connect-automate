@@ -9,6 +9,59 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      products: {
+        Row: {
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          image_url: string | null
+          inventory: number
+          is_shared: boolean
+          owner_user_id: string | null
+          price: number
+          sku: string
+          store_id: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          inventory?: number
+          is_shared?: boolean
+          owner_user_id?: string | null
+          price: number
+          sku: string
+          store_id?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          inventory?: number
+          is_shared?: boolean
+          owner_user_id?: string | null
+          price?: number
+          sku?: string
+          store_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           access_token: string | null
