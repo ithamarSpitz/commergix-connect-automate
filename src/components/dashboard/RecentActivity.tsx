@@ -55,7 +55,12 @@ export const RecentActivity = ({ syncLogs, isLoading }: RecentActivityProps) => 
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">No recent activity</p>
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <p className="text-sm text-muted-foreground">No activity data available</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Sync your store to see activity here
+                </p>
+              </div>
             )}
           </div>
         )}

@@ -21,6 +21,7 @@ const DashboardPage = () => {
   });
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -28,30 +29,42 @@ const DashboardPage = () => {
       
       try {
         setIsLoading(true);
+        setError(null);
         
-        // Set demo data immediately to prevent loading issues
-        const demoStats = {
-          totalProducts: 24,
-          totalOrders: 8,
-          revenue: 1249.99,
-          pendingOrders: 3,
-        };
-        
-        setStats(demoStats);
-        
-        // Try to fetch real stats in the background, but don't block UI on failure
+        // Fetch real stats from Supabase function
         try {
           const { data: statsData, error: statsError } = await supabaseClient.functions.invoke("dashboard/stats");
           
-          if (!statsError && statsData) {
+          if (statsError) {
+            console.error("Error fetching stats:", statsError);
+            setError("Failed to fetch dashboard statistics");
+          } else if (statsData) {
             setStats(statsData);
+          } else {
+            setError("No statistics data available");
           }
         } catch (error) {
           console.error("Error fetching stats:", error);
-          // Already using demo data, no need for additional fallback
+          setError("Error connecting to the server");
+        }
+        
+        // Add real sync logs fetching logic here when available
+        // For now, we'll just set an empty array if nothing is available
+        const { data: logsData, error: logsError } = await supabaseClient
+          .from('sync_logs')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('timestamp', { ascending: false })
+          .limit(5);
+          
+        if (!logsError && logsData) {
+          setSyncLogs(logsData);
+        } else {
+          setSyncLogs([]);
         }
       } catch (error) {
         console.error("Dashboard data fetch error:", error);
+        setError("Failed to load dashboard data");
       } finally {
         setIsLoading(false);
       }
@@ -60,50 +73,14 @@ const DashboardPage = () => {
     fetchDashboardData();
   }, [user]);
   
-  // For demo purposes - set demo sync logs
-  useEffect(() => {
-    // Simulate data for the demo
-    const demoSyncLogs: SyncLog[] = [
-      {
-        id: "1",
-        user_id: user?.id || "",
-        type: "orders",
-        details: "Successfully synced 5 new orders from Shopify",
-        status: "success",
-        related_id: null,
-        timestamp: new Date().toISOString(),
-      },
-      {
-        id: "2",
-        user_id: user?.id || "",
-        type: "products",
-        details: "Updated inventory for 12 products",
-        status: "success",
-        related_id: null,
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-      },
-      {
-        id: "3",
-        user_id: user?.id || "",
-        type: "inventory",
-        details: "Inventory sync complete",
-        status: "success",
-        related_id: null,
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-      },
-    ];
-    
-    setSyncLogs(demoSyncLogs);
-    setIsLoading(false);
-  }, [user]);
-  
   const handleSync = () => {
     toast({
       title: "Sync Started",
       description: "Synchronizing your data...",
     });
     
-    // Mock successful sync after 1.5 seconds
+    // Here you would add real sync logic
+    // For now, we'll just show a success toast after a delay
     setTimeout(() => {
       toast({
         title: "Sync Complete",
@@ -122,12 +99,20 @@ const DashboardPage = () => {
         </Button>
       </div>
       
-      <DashboardStats stats={stats} />
-      
-      <div className="grid gap-4 md:grid-cols-2">
-        <RecentActivity syncLogs={syncLogs} isLoading={isLoading} />
-        <MonthlyOverview />
-      </div>
+      {error ? (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+          {error}
+        </div>
+      ) : (
+        <>
+          <DashboardStats stats={stats} />
+          
+          <div className="grid gap-4 md:grid-cols-2">
+            <RecentActivity syncLogs={syncLogs} isLoading={isLoading} />
+            <MonthlyOverview />
+          </div>
+        </>
+      )}
     </div>
   );
 };
