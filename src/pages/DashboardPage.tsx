@@ -29,29 +29,27 @@ const DashboardPage = () => {
       try {
         setIsLoading(true);
         
-        // Try to fetch stats from the edge function, but don't block on failure
-        try {
-          const { data: statsData, error: statsError } = await supabaseClient.functions.invoke("dashboard/stats");
-          
-          if (statsError) {
-            console.error("Error fetching stats:", statsError);
-            // Continue with demo data on error
-          } else if (statsData) {
-            setStats(statsData);
-            return; // Successfully got real data, skip demo data
-          }
-        } catch (error) {
-          console.error("Error fetching stats:", error);
-          // Continue with demo data on error
-        }
-        
-        // For demo purposes - always set demo data as fallback
-        setStats({
+        // Set demo data immediately to prevent loading issues
+        const demoStats = {
           totalProducts: 24,
           totalOrders: 8,
           revenue: 1249.99,
           pendingOrders: 3,
-        });
+        };
+        
+        setStats(demoStats);
+        
+        // Try to fetch real stats in the background, but don't block UI on failure
+        try {
+          const { data: statsData, error: statsError } = await supabaseClient.functions.invoke("dashboard/stats");
+          
+          if (!statsError && statsData) {
+            setStats(statsData);
+          }
+        } catch (error) {
+          console.error("Error fetching stats:", error);
+          // Already using demo data, no need for additional fallback
+        }
       } catch (error) {
         console.error("Dashboard data fetch error:", error);
       } finally {
@@ -62,7 +60,7 @@ const DashboardPage = () => {
     fetchDashboardData();
   }, [user]);
   
-  // For demo purposes
+  // For demo purposes - set demo sync logs
   useEffect(() => {
     // Simulate data for the demo
     const demoSyncLogs: SyncLog[] = [
