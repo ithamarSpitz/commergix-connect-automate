@@ -9,6 +9,7 @@ import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { MonthlyOverview } from "@/components/dashboard/MonthlyOverview";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const DashboardPage = () => {
   const { user } = useAuth();
@@ -31,21 +32,30 @@ const DashboardPage = () => {
         setIsLoading(true);
         setError(null);
         
-        // Fetch real stats from Supabase function
+        // Fetch real stats from Supabase function with error handling
         try {
-          const { data: statsData, error: statsError } = await supabaseClient.functions.invoke("dashboard/stats");
+          const { data: statsData, error: statsError } = await supabaseClient.functions.invoke("dashboard/stats", {
+            method: 'GET',
+          });
           
           if (statsError) {
             console.error("Error fetching stats:", statsError);
-            setError("Failed to fetch dashboard statistics");
+            throw new Error("Failed to fetch dashboard statistics");
           } else if (statsData) {
             setStats(statsData);
-          } else {
-            setError("No statistics data available");
           }
         } catch (error) {
           console.error("Error fetching stats:", error);
-          setError("Error connecting to the server");
+          // Set error but don't stop execution - we'll still show mock sync logs
+          setError("Unable to load statistics. Please try again later.");
+          
+          // Use fallback stats data
+          setStats({
+            totalProducts: 0,
+            totalOrders: 0,
+            revenue: 0,
+            pendingOrders: 0,
+          });
         }
         
         // Create example sync logs since the sync_logs table doesn't exist yet
@@ -109,20 +119,19 @@ const DashboardPage = () => {
         </Button>
       </div>
       
-      {error ? (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-          {error}
-        </div>
-      ) : (
-        <>
-          <DashboardStats stats={stats} />
-          
-          <div className="grid gap-4 md:grid-cols-2">
-            <RecentActivity syncLogs={syncLogs} isLoading={isLoading} />
-            <MonthlyOverview />
-          </div>
-        </>
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
+      
+      <DashboardStats stats={stats} />
+      
+      <div className="grid gap-4 md:grid-cols-2">
+        <RecentActivity syncLogs={syncLogs} isLoading={isLoading} />
+        <MonthlyOverview />
+      </div>
     </div>
   );
 };

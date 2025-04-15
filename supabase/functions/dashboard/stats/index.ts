@@ -35,22 +35,35 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data: statsData, error: statsError } = await supabase
-      .from("stores")
-      .select("*");
-
-    if (statsError) {
+    // Get user ID from JWT
+    const jwt = authHeader.replace("Bearer ", "");
+    const { data: userData, error: userError } = await supabase.auth.getUser(jwt);
+    
+    if (userError || !userData.user) {
       return new Response(
-        JSON.stringify({ error: statsError.message }),
+        JSON.stringify({ error: "Invalid user token" }),
         {
-          status: 400,
+          status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
+    
+    // Get user's stats data
+    // In a real implementation, you would fetch actual data from the database
+    // For example:
+    // const { data: products } = await supabase
+    //   .from('products')
+    //   .select('*')
+    //   .eq('user_id', userData.user.id);
+    
+    // const { data: orders } = await supabase
+    //   .from('orders')
+    //   .select('*')
+    //   .eq('user_id', userData.user.id);
 
-    // Mock statistics data since we just need demo data
-    const mockStats = {
+    // For demo purposes, we'll return mock data
+    const statsData = {
       totalProducts: 24,
       totalOrders: 8,
       revenue: 1249.99,
@@ -58,13 +71,15 @@ serve(async (req) => {
     };
 
     return new Response(
-      JSON.stringify(mockStats),
+      JSON.stringify(statsData),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
   } catch (error) {
+    console.error("Error in dashboard/stats function:", error);
+    
     return new Response(
       JSON.stringify({ error: error.message }),
       {
