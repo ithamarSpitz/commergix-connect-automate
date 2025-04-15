@@ -49,33 +49,34 @@ serve(async (req) => {
       );
     }
 
-    // Fetch products data
-    const { data: products, error: productsError } = await supabase
-      .from('products')
-      .select('*')
-      .eq('owner_user_id', userData.user.id);
-    
-    if (productsError) {
-      console.error("Error fetching products:", productsError);
-    }
-    
-    // We would fetch orders from an orders table if it existed
-    // For now, we'll use an empty array to simulate no orders yet
-    const orders = [];
-    
-    // Calculate stats from real data
-    const totalProducts = products?.length || 0;
-    const totalOrders = orders.length || 0;
-    const revenue = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
-    const pendingOrders = orders.filter(order => order.status === 'processing').length;
-
-    // Return the actual calculated stats
-    const statsData = {
-      totalProducts,
-      totalOrders,
-      revenue,
-      pendingOrders,
+    // Default stats with zeros
+    let statsData = {
+      totalProducts: 0,
+      totalOrders: 0,
+      revenue: 0,
+      pendingOrders: 0
     };
+
+    try {
+      // Fetch products data
+      const { data: products } = await supabase
+        .from('products')
+        .select('*')
+        .eq('owner_user_id', userData.user.id);
+      
+      // We would fetch orders from an orders table if it existed
+      const orders = [];
+      
+      // Update stats only if we have valid data
+      if (products) {
+        statsData.totalProducts = products.length;
+        statsData.totalOrders = orders.length;
+        statsData.revenue = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+        statsData.pendingOrders = orders.filter(order => order.status === 'processing').length;
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }
 
     return new Response(
       JSON.stringify(statsData),
