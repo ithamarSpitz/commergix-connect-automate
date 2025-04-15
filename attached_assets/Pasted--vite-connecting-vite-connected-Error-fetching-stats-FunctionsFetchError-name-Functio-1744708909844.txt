@@ -1,0 +1,47 @@
+[vite] connecting...
+[vite] connected.
+Error fetching stats: 
+FunctionsFetchError {name: "FunctionsFetchError", context: TypeError}
+
+Error fetching stats: 
+Error {}
+
+Failed to fetch
+`DialogContent` requires a `DialogTitle` for the component to be accessible for screen reader users.
+
+If you want to hide the `DialogTitle`, you can wrap it with our VisuallyHidden component.
+
+For more information, see https://radix-ui.com/primitives/docs/components/dialog
+
+If you want to hide the &#x60;DialogTitle&#x60;, you can wrap it with our VisuallyHidden component.
+
+For more information, see https://radix-ui.com/primitives/docs/components/dialog
+at t.value (https://11c1795a-2111-459b-8bfe-5d1cd1f3cf0a-00-1dejjk42omr98.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://11c1795a-2111-459b-8bfe-5d1cd1f3cf0a-00-1dejjk42omr98.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://11c1795a-2111-459b-8bfe-5d1cd1f3cf0a-00-1dejjk42omr98.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://11c1795a-2111-459b-8bfe-5d1cd1f3cf0a-00-1dejjk42omr98.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+Error fetching stats: 
+FunctionsFetchError {name: "FunctionsFetchError", context: TypeError}
+context: Error
+name: "FunctionsFetchError"
+message: "Failed to send a request to the Edge Function"
+stack: "FunctionsFetchError: Failed to send a request to the Edge Function↵ at https://11c1795a-2111-459b-8bfe-5d1cd1f3cf0a-00-1dejjk42omr98.pike.replit.dev/node_modules/.vite/deps/@supabase_supabase-js.js?v=87d2d537:1388:17"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+Error fetching stats: 
+Error {}
+
+at t.value (https://11c1795a-2111-459b-8bfe-5d1cd1f3cf0a-00-1dejjk42omr98.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://11c1795a-2111-459b-8bfe-5d1cd1f3cf0a-00-1dejjk42omr98.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://11c1795a-2111-459b-8bfe-5d1cd1f3cf0a-00-1dejjk42omr98.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://11c1795a-2111-459b-8bfe-5d1cd1f3cf0a-00-1dejjk42omr98.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Failed to fetch
+at window.fetch (https://11c1795a-2111-459b-8bfe-5d1cd1f3cf0a-00-1dejjk42omr98.pike.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:218642)
+at window.fetch (https://cdn.gpteng.co/gptengineer.js:1:1945)
+at https://11c1795a-2111-459b-8bfe-5d1cd1f3cf0a-00-1dejjk42omr98.pike.replit.dev/node_modules/.vite/deps/@supabase_supabase-js.js?v=87d2d537:3900:23
+at https://11c1795a-2111-459b-8bfe-5d1cd1f3cf0a-00-1dejjk42omr98.pike.replit.dev/node_modules/.vite/deps/@supabase_supabase-js.js?v=87d2d537:3921:12
+at Generator.next (<anonymous>)
+at fulfilled (https://11c1795a-2111-459b-8bfe-5d1cd1f3cf0a-00-1dejjk42omr98.pike.replit.dev/node_modules/.vite/deps/@supabase_supabase-js.js?v=87d2d537:3873
