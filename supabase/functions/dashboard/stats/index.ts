@@ -59,15 +59,21 @@ serve(async (req) => {
       console.error("Error fetching products:", productsError);
     }
     
-    // We would fetch orders from an orders table if it existed
-    // For now, we'll use an empty array to simulate no orders yet
-    const orders = [];
+    // Fetch orders data from our new orders table
+    const { data: orders, error: ordersError } = await supabase
+      .from('orders')
+      .select('*, store:stores!inner(*)')
+      .eq('store.user_id', userData.user.id);
+    
+    if (ordersError) {
+      console.error("Error fetching orders:", ordersError);
+    }
     
     // Calculate stats from real data
     const totalProducts = products?.length || 0;
-    const totalOrders = orders.length || 0;
-    const revenue = orders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
-    const pendingOrders = orders.filter(order => order.status === 'processing').length;
+    const totalOrders = orders?.length || 0;
+    const revenue = orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+    const pendingOrders = orders?.filter(order => order.status === 'processing').length || 0;
 
     // Return the actual calculated stats
     const statsData = {

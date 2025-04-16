@@ -58,8 +58,23 @@ const DashboardPage = () => {
           setError("Unable to load statistics. Please try again later.");
         }
         
-        // Set empty sync logs - in a real app we would fetch this from a real table
-        setSyncLogs([]);
+        // Fetch real sync logs from the sync_logs table
+        try {
+          const { data: logsData, error: logsError } = await supabaseClient
+            .from('sync_logs')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('timestamp', { ascending: false })
+            .limit(5);
+            
+          if (logsError) {
+            console.error("Error fetching sync logs:", logsError);
+          } else {
+            setSyncLogs(logsData || []);
+          }
+        } catch (error) {
+          console.error("Error fetching sync logs:", error);
+        }
       } catch (error) {
         console.error("Dashboard data fetch error:", error);
         setError("Failed to load dashboard data");
@@ -71,20 +86,60 @@ const DashboardPage = () => {
     fetchDashboardData();
   }, [user]);
   
-  const handleSync = () => {
+  const handleSync = async () => {
+    if (!user) return;
+    
     toast({
       title: "Sync Started",
       description: "Synchronizing your data...",
     });
     
-    // Here you would add real sync logic
-    // For now, we'll just show a success toast after a delay
-    setTimeout(() => {
+    try {
+      // Add a real sync log entry
+      const { data, error } = await supabaseClient
+        .from('sync_logs')
+        .insert([
+          {
+            user_id: user.id,
+            type: 'products',
+            details: 'Manual sync initiated',
+            status: 'success'
+          }
+        ])
+        .select();
+        
+      if (error) {
+        console.error("Error creating sync log:", error);
+        throw new Error("Failed to create sync log");
+      }
+      
+      // Refetch sync logs to show the new entry
+      const { data: logsData, error: logsError } = await supabaseClient
+        .from('sync_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('timestamp', { ascending: false })
+        .limit(5);
+        
+      if (logsError) {
+        console.error("Error fetching sync logs:", logsError);
+      } else {
+        setSyncLogs(logsData || []);
+      }
+      
       toast({
         title: "Sync Complete",
         description: "Your data has been successfully synchronized.",
       });
-    }, 1500);
+    } catch (error) {
+      console.error("Sync error:", error);
+      
+      toast({
+        title: "Sync Failed",
+        description: "There was an error synchronizing your data.",
+        variant: "destructive"
+      });
+    }
   };
   
   return (

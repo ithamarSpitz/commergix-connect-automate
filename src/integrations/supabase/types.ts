@@ -9,6 +9,148 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      inventory: {
+        Row: {
+          product_id: string
+          quantity_available: number
+          reserved_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          product_id: string
+          quantity_available?: number
+          reserved_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          product_id?: string
+          quantity_available?: number
+          reserved_quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          created_at: string
+          fulfillment_status: string
+          id: string
+          order_id: string
+          price_each: number
+          product_id: string
+          quantity: number
+          retailer_user_id: string | null
+          shipped_at: string | null
+          supplier_user_id: string | null
+          tracking_carrier: string | null
+          tracking_number: string | null
+        }
+        Insert: {
+          created_at?: string
+          fulfillment_status?: string
+          id?: string
+          order_id: string
+          price_each: number
+          product_id: string
+          quantity: number
+          retailer_user_id?: string | null
+          shipped_at?: string | null
+          supplier_user_id?: string | null
+          tracking_carrier?: string | null
+          tracking_number?: string | null
+        }
+        Update: {
+          created_at?: string
+          fulfillment_status?: string
+          id?: string
+          order_id?: string
+          price_each?: number
+          product_id?: string
+          quantity?: number
+          retailer_user_id?: string | null
+          shipped_at?: string | null
+          supplier_user_id?: string | null
+          tracking_carrier?: string | null
+          tracking_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          buyer_email: string
+          buyer_name: string
+          created_at: string
+          currency: string
+          external_order_id: string
+          id: string
+          order_date: string
+          raw_data: Json | null
+          shipping_address: Json
+          status: string
+          store_id: string | null
+          total_amount: number
+        }
+        Insert: {
+          buyer_email: string
+          buyer_name: string
+          created_at?: string
+          currency?: string
+          external_order_id: string
+          id?: string
+          order_date: string
+          raw_data?: Json | null
+          shipping_address: Json
+          status: string
+          store_id?: string | null
+          total_amount: number
+        }
+        Update: {
+          buyer_email?: string
+          buyer_name?: string
+          created_at?: string
+          currency?: string
+          external_order_id?: string
+          id?: string
+          order_date?: string
+          raw_data?: Json | null
+          shipping_address?: Json
+          status?: string
+          store_id?: string | null
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           created_at: string
@@ -105,6 +247,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sync_logs: {
+        Row: {
+          details: string
+          id: string
+          related_id: string | null
+          status: string
+          timestamp: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          details: string
+          id?: string
+          related_id?: string | null
+          status: string
+          timestamp?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          details?: string
+          id?: string
+          related_id?: string | null
+          status?: string
+          timestamp?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       usage_log: {
         Row: {
