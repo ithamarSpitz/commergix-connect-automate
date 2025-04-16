@@ -58,30 +58,8 @@ const DashboardPage = () => {
           setError("Unable to load statistics. Please try again later.");
         }
         
-        // Create example sync logs since the sync_logs table doesn't exist yet
-        // In a real app, we'd query the actual table if it exists
-        const mockSyncLogs: SyncLog[] = [
-          {
-            id: "1",
-            user_id: user.id,
-            type: "products",
-            details: "Last product sync completed",
-            status: "success",
-            related_id: null,
-            timestamp: new Date().toISOString()
-          },
-          {
-            id: "2",
-            user_id: user.id,
-            type: "orders",
-            details: "Last order sync completed",
-            status: "success",
-            related_id: null,
-            timestamp: new Date(Date.now() - 86400000).toISOString()
-          }
-        ];
-        
-        setSyncLogs(mockSyncLogs);
+        // Set empty sync logs - in a real app we would fetch this from a real table
+        setSyncLogs([]);
       } catch (error) {
         console.error("Dashboard data fetch error:", error);
         setError("Failed to load dashboard data");

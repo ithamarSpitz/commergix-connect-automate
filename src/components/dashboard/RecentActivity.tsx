@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SyncLog } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FileX } from "lucide-react";
 
 interface RecentActivityProps {
   syncLogs: SyncLog[];
@@ -57,6 +58,7 @@ export const RecentActivity = ({ syncLogs, isLoading }: RecentActivityProps) => 
               ))
             ) : (
               <div className="flex flex-col items-center justify-center py-6 text-center">
+                <FileX className="h-12 w-12 text-muted-foreground mb-3" />
                 <p className="text-sm text-muted-foreground">No activity data available</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Sync your store to see activity here
