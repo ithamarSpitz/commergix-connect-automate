@@ -1,8 +1,14 @@
-
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AddStoreFormProps {
   onAddStore: (storeName: string, platform: string) => Promise<void>;
@@ -35,13 +41,18 @@ export const AddStoreForm = ({ onAddStore, isAddingStore }: AddStoreFormProps) =
         </div>
         <div>
           <Label htmlFor="storePlatform">Platform</Label>
-          <Input
-            type="text"
-            id="storePlatform"
-            placeholder="Shopify"
+          <Select
             value={newStorePlatform}
-            onChange={(e) => setNewStorePlatform(e.target.value)}
-          />
+            onValueChange={setNewStorePlatform}
+          >
+            <SelectTrigger id="storePlatform">
+              <SelectValue placeholder="Select Platform" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="shopify">Shopify</SelectItem>
+              <SelectItem value="mirakl">Mirakl</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <Button

@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw } from "lucide-react";
@@ -14,6 +13,8 @@ import {
 } from "@/components/ui/table";
 import { Store } from "@/types";
 import { StoreDeleteDialog } from "./StoreDeleteDialog";
+import { ConnectStoreButton } from "./ConnectStoreButton";
+import { ConnectMiraklButton } from "./ConnectMiraklButton";
 
 interface StoreTableProps {
   stores: Store[];
@@ -32,6 +33,35 @@ export const StoreTable = ({
     return <p>Loading stores...</p>;
   }
 
+  // Function to render the correct connection button based on platform
+  const renderConnectionButton = (store: Store) => {
+    if (store.status !== 'pending') return null;
+    
+    const platform = store.platform.toLowerCase();
+    
+    if (platform === 'shopify') {
+      return (
+        <ConnectStoreButton
+          storeId={store.id}
+          platform={store.platform}
+        />
+      );
+    } else if (platform === 'mirakl') {
+      return (
+        <ConnectMiraklButton
+          storeId={store.id}
+        />
+      );
+    } else {
+      // Generic connection button for other platforms
+      return (
+        <Button variant="outline" size="sm" disabled>
+          Connect
+        </Button>
+      );
+    }
+  };
+
   return (
     <Table>
       <TableCaption>A list of your connected stores.</TableCaption>
@@ -49,19 +79,29 @@ export const StoreTable = ({
             <TableCell>{connection.store_name}</TableCell>
             <TableCell>{connection.platform}</TableCell>
             <TableCell>
-              <Badge variant="secondary" className="text-amber-600 bg-amber-100">
+              <Badge 
+                variant="secondary" 
+                className={connection.status === 'active' 
+                  ? "text-green-600 bg-green-100" 
+                  : "text-amber-600 bg-amber-100"
+                }
+              >
                 {connection.status === 'active' ? 'Active' : 'Pending'}
               </Badge>
             </TableCell>
             <TableCell className="text-right">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onSyncStore(connection.id)}
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Sync
-              </Button>
+              {connection.status === 'pending' ? (
+                renderConnectionButton(connection)
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSyncStore(connection.id)}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Sync
+                </Button>
+              )}
               <StoreDeleteDialog 
                 storeId={connection.id} 
                 onConfirmDelete={onDeleteStore} 
