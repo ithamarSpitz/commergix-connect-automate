@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,8 +23,9 @@ import BillingPage from "./pages/settings/BillingPage";
 import ProfilePage from "./pages/settings/ProfilePage";
 import AdminPage from "./pages/AdminPage";
 import NotFound from "./pages/NotFound";
-import AuthCallback from "./pages/AuthCallback"; // Add our new auth callback page
-import ReportsPage from "@/pages/ReportsPage"; // Added ReportsPage import
+import AuthCallback from "./pages/AuthCallback";
+import ShopifyCallback from "./pages/ShopifyCallback"; // Import ShopifyCallback
+import ReportsPage from "@/pages/ReportsPage";
 
 // Auth-protected route wrapper
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -52,6 +52,7 @@ const App = () => {
               {/* Public routes */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/shopify/callback" element={<ShopifyCallback />} /> {/* Add ShopifyCallback route */}
 
               {/* Authenticated Routes */}
               <Route element={<ProtectedRoute />}>
@@ -74,7 +75,7 @@ const App = () => {
                     <Route path="profile" element={<ProfilePage />} />
                   </Route>
 
-                  <Route path="/reports" element={<ReportsPage />} /> {/* Added Reports route */}
+                  <Route path="/reports" element={<ReportsPage />} />
 
                   {/* Admin routes */}
                   <Route element={<AdminRoute />}>
