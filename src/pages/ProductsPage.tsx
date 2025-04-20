@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -8,6 +7,7 @@ import { ProductForm } from "@/components/products/ProductForm";
 import { ProductSearch } from "@/components/products/ProductSearch";
 import { ProductList } from "@/components/products/ProductList";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext"; // Import useAuth hook
 
 const ProductsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,6 +15,7 @@ const ProductsPage = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
+  const { user } = useAuth(); // Get current authenticated user
 
   // Fetch products from Supabase
   useEffect(() => {
@@ -22,9 +23,15 @@ const ProductsPage = () => {
       try {
         setLoading(true);
         
+        if (!user) {
+          setProducts([]);
+          return;
+        }
+
         const { data, error } = await supabase
           .from('products')
-          .select('*');
+          .select('*')
+          .eq('owner_user_id', user.id); // Filter products by current user ID
         
         if (error) {
           throw error;
@@ -46,10 +53,19 @@ const ProductsPage = () => {
     };
 
     fetchProducts();
-  }, [toast]);
+  }, [toast, user]); // Add user to dependencies
 
   const handleAddProduct = async (newProduct: Product) => {
     try {
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to add a product.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Save product to Supabase
       const { data, error } = await supabase
         .from('products')
@@ -61,7 +77,7 @@ const ProductsPage = () => {
           sku: newProduct.sku,
           is_shared: newProduct.is_shared,
           image_url: newProduct.image_url,
-          owner_user_id: newProduct.owner_user_id,
+          owner_user_id: user.id, // Always use current user's ID
           store_id: newProduct.store_id,
           inventory: newProduct.inventory
         }])
