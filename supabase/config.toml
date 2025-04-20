@@ -1,5 +1,5 @@
 
 project_id = "tueobdgcahbccqznnhjc"
 
-[functions.dashboard.stats]
+[functions.dashboard-stats]
 verify_jwt = true

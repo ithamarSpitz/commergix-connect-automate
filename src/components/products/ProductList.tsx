@@ -1,5 +1,3 @@
-
-import { Link } from "react-router-dom";
 import { Product } from "@/types";
 import { ProductCard } from "@/components/ProductCard";
 
@@ -20,9 +18,7 @@ export const ProductList = ({ products, searchQuery }: ProductListProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {filteredProducts.map((product) => (
-        <Link to={`/products/${product.id}`} key={product.id}>
-          <ProductCard product={product} />
-        </Link>
+        <ProductCard key={product.id} product={product} />
       ))}
     </div>
   );
