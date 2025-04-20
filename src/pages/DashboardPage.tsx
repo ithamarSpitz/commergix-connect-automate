@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabaseClient } from "@/hooks/useSupabase";
@@ -33,37 +32,79 @@ const DashboardPage = () => {
         setIsLoading(true);
         setError(null);
         
-        // Fetch real stats from Supabase function with error handling
+        // Fetch dashboard statistics directly from the database instead of Edge Function
         try {
-          const { data: statsData, error: statsError } = await supabaseClient.functions.invoke("dashboard-stats", {
-            method: 'GET',
-          });
-          
-          if (statsError) {
-            console.error("Error fetching stats:", statsError);
-            throw new Error("Failed to fetch dashboard statistics");
-          } else if (statsData) {
-            setStats(statsData);
+          // Count total products - without user filtering for now
+          const { count: productCount, error: productError } = await supabaseClient
+            .from('products')
+            .select('*', { count: 'exact', head: true });
             
-            // Check if user has any data
-            const hasNoData = 
-              statsData.totalProducts === 0 && 
-              statsData.totalOrders === 0 && 
-              statsData.revenue === 0;
-              
-            setIsNewUser(hasNoData);
+          if (productError) {
+            console.error("Error fetching product count:", productError);
+            throw new Error("Failed to fetch products count");
           }
+          
+          // Count total orders - without user filtering for now
+          const { count: orderCount, error: orderError } = await supabaseClient
+            .from('orders')
+            .select('*', { count: 'exact', head: true });
+            
+          if (orderError) {
+            console.error("Error fetching order count:", orderError);
+            throw new Error("Failed to fetch orders count");
+          }
+          
+          // Count pending orders
+          const { count: pendingOrderCount, error: pendingOrderError } = await supabaseClient
+            .from('orders')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'pending');
+            
+          if (pendingOrderError) {
+            console.error("Error fetching pending orders:", pendingOrderError);
+            throw new Error("Failed to fetch pending orders count");
+          }
+          
+          // Calculate total revenue
+          const { data: orderData, error: revenueError } = await supabaseClient
+            .from('orders')
+            .select('total_amount');
+            
+          if (revenueError) {
+            console.error("Error fetching revenue data:", revenueError);
+            throw new Error("Failed to fetch revenue data");
+          }
+          
+          const totalRevenue = orderData?.reduce((sum, order) => 
+            sum + (parseFloat(order.total_amount) || 0), 0) || 0;
+          
+          const dashboardStats = {
+            totalProducts: productCount || 0,
+            totalOrders: orderCount || 0,
+            pendingOrders: pendingOrderCount || 0,
+            revenue: totalRevenue,
+          };
+          
+          setStats(dashboardStats);
+          
+          // Check if user has any data
+          const hasNoData = 
+            dashboardStats.totalProducts === 0 && 
+            dashboardStats.totalOrders === 0 && 
+            dashboardStats.revenue === 0;
+            
+          setIsNewUser(hasNoData);
+          
         } catch (error) {
           console.error("Error fetching stats:", error);
           setError("Unable to load statistics. Please try again later.");
         }
         
-        // Fetch real sync logs from the sync_logs table
+        // Fetch sync logs from the sync_logs table
         try {
           const { data: logsData, error: logsError } = await supabaseClient
             .from('sync_logs')
             .select('*')
-            .eq('user_id', user.id)
             .order('timestamp', { ascending: false })
             .limit(5);
             
@@ -106,7 +147,6 @@ const DashboardPage = () => {
         .from('sync_logs')
         .insert([
           {
-            user_id: user.id,
             type: 'products',
             details: 'Manual sync initiated',
             status: 'success'
@@ -123,7 +163,6 @@ const DashboardPage = () => {
       const { data: logsData, error: logsError } = await supabaseClient
         .from('sync_logs')
         .select('*')
-        .eq('user_id', user.id)
         .order('timestamp', { ascending: false })
         .limit(5);
         
