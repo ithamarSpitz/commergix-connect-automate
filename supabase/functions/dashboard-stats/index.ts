@@ -1,6 +1,15 @@
+// Follow this setup guide to integrate the Deno runtime into your application:
+// https://deno.com/manual/getting_started/javascript_typescript
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.23.0";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+interface MonthlyStats {
+  orderCount: number;
+  revenue: number;
+  orderCountChange: number;
+  revenueChange: number;
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,78 +27,104 @@ serve(async (req) => {
   }
 
   try {
-    // Get authorization header
-    const authHeader = req.headers.get("Authorization");
+    // Get authorization header from request
+    const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "No authorization header" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      return new Response(JSON.stringify({ error: 'No authorization header' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-    // Create Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Create Supabase client with the user's JWT
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    )
 
-    // Get user ID from JWT
-    const jwt = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabase.auth.getUser(jwt);
+    // Get current user info to verify authentication
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
     
-    if (userError || !userData.user) {
-      return new Response(
-        JSON.stringify({ error: "Invalid user token" }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
-    // Fetch products data
-    const { data: products, error: productsError } = await supabase
-      .from('products')
-      .select('*')
-      .eq('owner_user_id', userData.user.id);
+    // Get current date
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
     
-    if (productsError) {
-      console.error("Error fetching products:", productsError);
-    }
+    // Calculate first day of current month
+    const startOfMonth = new Date(currentYear, currentMonth, 1);
     
-    // Fetch orders data from our new orders table
-    const { data: orders, error: ordersError } = await supabase
+    // Calculate first day of previous month
+    const startOfPrevMonth = new Date(currentYear, currentMonth - 1, 1);
+    
+    // Format dates for Supabase query
+    const currentMonthStart = startOfMonth.toISOString();
+    const prevMonthStart = startOfPrevMonth.toISOString();
+
+    // Fetch current month orders for the user
+    const { data: currentMonthData, error: currentMonthError } = await supabaseClient
       .from('orders')
-      .select('*, store:stores!inner(*)')
-      .eq('store.user_id', userData.user.id);
-    
-    if (ordersError) {
-      console.error("Error fetching orders:", ordersError);
-    }
-    
-    // Calculate stats from real data
-    const totalProducts = products?.length || 0;
-    const totalOrders = orders?.length || 0;
-    const revenue = orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
-    const pendingOrders = orders?.filter(order => order.status === 'processing').length || 0;
+      .select('id, total_amount, currency')
+      .eq('owner_user_id', user.id)
+      .gte('created_at', currentMonthStart);
 
-    // Return the actual calculated stats
-    const statsData = {
-      totalProducts,
-      totalOrders,
-      revenue,
-      pendingOrders,
+    if (currentMonthError) {
+      throw new Error(currentMonthError.message);
+    }
+
+    // Fetch previous month orders
+    const { data: previousMonthData, error: previousMonthError } = await supabaseClient
+      .from('orders')
+      .select('id, total_amount, currency')
+      .eq('owner_user_id', user.id)
+      .gte('created_at', prevMonthStart)
+      .lt('created_at', currentMonthStart);
+
+    if (previousMonthError) {
+      throw new Error(previousMonthError.message);
+    }
+
+    // Calculate current month stats
+    const currentOrderCount = currentMonthData?.length || 0;
+    const currentRevenue = currentMonthData?.reduce((sum, order) => 
+      sum + (parseFloat(order.total_amount) || 0), 0) || 0;
+
+    // Calculate previous month stats
+    const prevOrderCount = previousMonthData?.length || 0;
+    const prevRevenue = previousMonthData?.reduce((sum, order) => 
+      sum + (parseFloat(order.total_amount) || 0), 0) || 0;
+
+    // Calculate percentage changes
+    const orderCountChange = prevOrderCount === 0 
+      ? 0 
+      : ((currentOrderCount - prevOrderCount) / prevOrderCount) * 100;
+    
+    const revenueChange = prevRevenue === 0 
+      ? 0 
+      : ((currentRevenue - prevRevenue) / prevRevenue) * 100;
+
+    const stats: MonthlyStats = {
+      orderCount: currentOrderCount,
+      revenue: currentRevenue,
+      orderCountChange: parseFloat(orderCountChange.toFixed(1)),
+      revenueChange: parseFloat(revenueChange.toFixed(1)),
     };
 
-    return new Response(
-      JSON.stringify(statsData),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return new Response(JSON.stringify({
+      stats,
+      message: currentOrderCount === 0 && prevOrderCount === 0 
+        ? "No order data yet. Dashboard will update automatically when orders are created." 
+        : null
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
   } catch (error) {
     console.error("Error in dashboard/stats function:", error);
     
@@ -101,4 +136,4 @@ serve(async (req) => {
       }
     );
   }
-});
+})

@@ -1,0 +1,106 @@
+Supabase Schema
+
+Table: order_items
+  id                 uuid
+  order_id           uuid
+  product_id         uuid
+  quantity           int4
+  price_each         numeric
+  supplier_user_id   uuid
+  retailer_user_id   uuid
+  fulfillment_status text
+  tracking_number    text
+  tracking_carrier   text
+  shipped_at         timestamptz
+  created_at         timestamptz
+
+Table: orders
+  id                 uuid
+  store_id           uuid
+  external_order_id  uuid
+  buyer_name         text
+  buyer_email        text
+  shipping_address   jsonb
+  total_amount       numeric
+  currency           text
+  order_date         timestamptz
+  status             text
+  raw_data           jsonb
+  created_at         timestamptz
+
+Table: products
+  id                 uuid
+  owner_user_id      uuid
+  store_id           uuid
+  title              text
+  description        text
+  price              numeric
+  currency           text
+  sku                text
+  is_share           bool
+  image_url          text
+  inventory          int4
+  created_at         timestamptz
+
+Table: inventory
+  product_id         uuid
+  quantity_available int4
+  reserved_quantity  int4
+  updated_at         timestamptz
+
+Table: stores
+  id                 uuid
+  user_id            uuid
+  store_name         text
+  platform           text
+  domain             text
+  api_key            text
+  access_token       text
+  status             text
+  created_at         timestamptz
+
+Table: sync_logs
+  id                 uuid
+  user_id            uuid
+  type               text
+  details            text
+  status             text
+  related_id         uuid
+  timestamp          timestamptz
+
+Table: users
+  id                 uuid
+  name               text
+  role               text
+  plan_type          text
+  profile_description text
+  avatar_url         text
+  stripe_customer_id text
+  created_at         timestamptz
+
+Table: usage_log
+  user_id            uuid
+  date               date
+  action_count       int4
+  updated_at         timestamptz
+
+
+Relationships (Foreign Keys)
+
+order_items.order_id          -> orders.id
+order_items.product_id        -> products.id
+order_items.supplier_user_id  -> users.id
+order_items.retailer_user_id  -> users.id
+
+orders.store_id               -> stores.id
+
+products.owner_user_id        -> users.id
+products.store_id             -> stores.id
+
+inventory.product_id          -> products.id
+
+stores.user_id                -> users.id
+
+sync_logs.user_id             -> users.id
+
+usage_log.user_id             -> users.id
