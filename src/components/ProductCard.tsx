@@ -1,4 +1,3 @@
-
 import { Product } from "@/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { Edit, ExternalLink, ShoppingCart } from "lucide-react";
 import { Link } from "react-router-dom";
+import { PrivateImage } from "@/components/PrivateImage";
 
 interface ProductCardProps {
   product: Product;
@@ -18,7 +18,7 @@ export function ProductCard({ product, isMarketplace = false, onImport }: Produc
     <Card className="overflow-hidden transition-all hover:shadow-md">
       <div className="aspect-square w-full relative overflow-hidden bg-gray-100">
         {product.image_url ? (
-          <img
+          <PrivateImage
             src={product.image_url}
             alt={product.title}
             className="h-full w-full object-cover transition-all hover:scale-105"

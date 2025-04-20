@@ -4,7 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { supabaseClient } from "@/hooks/useSupabase";
 import { Button } from "@/components/ui/button";
 import { Zap } from "lucide-react";
-import { SyncLog } from "@/types";
+import { SyncLog, SyncType, SyncStatus } from "@/types";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { MonthlyOverview } from "@/components/dashboard/MonthlyOverview";
@@ -35,7 +35,7 @@ const DashboardPage = () => {
         
         // Fetch real stats from Supabase function with error handling
         try {
-          const { data: statsData, error: statsError } = await supabaseClient.functions.invoke("dashboard/stats", {
+          const { data: statsData, error: statsError } = await supabaseClient.functions.invoke("dashboard-stats", {
             method: 'GET',
           });
           
@@ -70,7 +70,13 @@ const DashboardPage = () => {
           if (logsError) {
             console.error("Error fetching sync logs:", logsError);
           } else {
-            setSyncLogs(logsData || []);
+            setSyncLogs(
+              logsData.map((log) => ({
+                ...log,
+                type: log.type as SyncType,
+                status: log.status as SyncStatus,
+              })) || []
+            );
           }
         } catch (error) {
           console.error("Error fetching sync logs:", error);
@@ -124,9 +130,14 @@ const DashboardPage = () => {
       if (logsError) {
         console.error("Error fetching sync logs:", logsError);
       } else {
-        setSyncLogs(logsData || []);
-      }
-      
+        setSyncLogs(
+          logsData.map((log) => ({
+            ...log,
+            type: log.type as SyncType,
+            status: log.status as SyncStatus,
+          })) || []
+        );
+      }      
       toast({
         title: "Sync Complete",
         description: "Your data has been successfully synchronized.",
