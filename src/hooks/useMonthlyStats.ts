@@ -48,20 +48,22 @@ export function useMonthlyStats(): MonthlyStats {
         const currentMonthStart = startOfMonth.toISOString();
         const prevMonthStart = startOfPrevMonth.toISOString();
 
-        // Fetch current month orders - without filtering by user until we determine the correct column
+        // Fetch current month orders for the current user
         const { data: currentMonthData, error: currentMonthError } = await supabase
           .from('orders')
-          .select('id, total_amount, currency')
-          .gte('created_at', currentMonthStart);
+          .select('id, total_amount, currency, store:stores!inner(user_id)')
+          .gte('created_at', currentMonthStart)
+          .eq('store.user_id', userId);
 
         if (currentMonthError) throw new Error(currentMonthError.message);
 
-        // Fetch previous month orders
+        // Fetch previous month orders for the current user
         const { data: previousMonthData, error: previousMonthError } = await supabase
           .from('orders')
-          .select('id, total_amount, currency')
+          .select('id, total_amount, currency, store:stores!inner(user_id)')
           .gte('created_at', prevMonthStart)
-          .lt('created_at', currentMonthStart);
+          .lt('created_at', currentMonthStart)
+          .eq('store.user_id', userId);
 
         if (previousMonthError) throw new Error(previousMonthError.message);
 

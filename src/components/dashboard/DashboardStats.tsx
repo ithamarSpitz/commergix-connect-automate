@@ -1,4 +1,3 @@
-
 import { StatCard } from "@/components/StatCard";
 import { Package, ShoppingCart, DollarSign, PackageOpen } from "lucide-react";
 
@@ -15,24 +14,24 @@ export const DashboardStats = ({ stats }: DashboardStatsProps) => {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <StatCard
-        title="Total Products"
+        title="Your Products"
         value={stats.totalProducts || 0}
         icon={Package}
         onClick={() => window.location.href = "/products"}
       />
       <StatCard
-        title="Orders"
+        title="Your Orders"
         value={stats.totalOrders || 0}
         icon={ShoppingCart}
         onClick={() => window.location.href = "/orders"}
       />
       <StatCard
-        title="Revenue"
+        title="Your Revenue"
         value={stats.revenue ? `$${stats.revenue.toFixed(2)}` : "$0.00"}
         icon={DollarSign}
       />
       <StatCard
-        title="Pending Orders"
+        title="Your Pending Orders"
         value={stats.pendingOrders || 0}
         description="Awaiting fulfillment"
         icon={PackageOpen}

@@ -34,54 +34,52 @@ const DashboardPage = () => {
         
         // Fetch dashboard statistics directly from the database instead of Edge Function
         try {
-          // Count total products - without user filtering for now
+          // Count total products - filtered by owner_user_id
           const { count: productCount, error: productError } = await supabaseClient
             .from('products')
-            .select('*', { count: 'exact', head: true });
+            .select('*', { count: 'exact', head: true })
+            .eq('owner_user_id', user.id);
             
           if (productError) {
             console.error("Error fetching product count:", productError);
             throw new Error("Failed to fetch products count");
           }
           
-          // Count total orders - without user filtering for now
-          const { count: orderCount, error: orderError } = await supabaseClient
+          // Count total orders - filtered by store.user_id through join
+          const { data: orderData, error: orderError } = await supabaseClient
             .from('orders')
-            .select('*', { count: 'exact', head: true });
+            .select('id, total_amount, store:stores!inner(user_id)')
+            .eq('store.user_id', user.id);
             
           if (orderError) {
             console.error("Error fetching order count:", orderError);
             throw new Error("Failed to fetch orders count");
           }
           
-          // Count pending orders
-          const { count: pendingOrderCount, error: pendingOrderError } = await supabaseClient
+          const orderCount = orderData?.length || 0;
+          
+          // Count pending orders - also filtered by store.user_id
+          const { data: pendingOrderData, error: pendingOrderError } = await supabaseClient
             .from('orders')
-            .select('*', { count: 'exact', head: true })
-            .eq('status', 'pending');
+            .select('id, store:stores!inner(user_id)')
+            .eq('store.user_id', user.id)
+            .eq('status', 'processing');
             
           if (pendingOrderError) {
             console.error("Error fetching pending orders:", pendingOrderError);
             throw new Error("Failed to fetch pending orders count");
           }
           
-          // Calculate total revenue
-          const { data: orderData, error: revenueError } = await supabaseClient
-            .from('orders')
-            .select('total_amount');
-            
-          if (revenueError) {
-            console.error("Error fetching revenue data:", revenueError);
-            throw new Error("Failed to fetch revenue data");
-          }
+          const pendingOrderCount = pendingOrderData?.length || 0;
           
+          // Calculate total revenue from the filtered orders
           const totalRevenue = orderData?.reduce((sum, order) => 
             sum + (parseFloat(order.total_amount) || 0), 0) || 0;
           
           const dashboardStats = {
             totalProducts: productCount || 0,
-            totalOrders: orderCount || 0,
-            pendingOrders: pendingOrderCount || 0,
+            totalOrders: orderCount,
+            pendingOrders: pendingOrderCount,
             revenue: totalRevenue,
           };
           
@@ -100,11 +98,12 @@ const DashboardPage = () => {
           setError("Unable to load statistics. Please try again later.");
         }
         
-        // Fetch sync logs from the sync_logs table
+        // Fetch sync logs from the sync_logs table - filtered by user_id
         try {
           const { data: logsData, error: logsError } = await supabaseClient
             .from('sync_logs')
             .select('*')
+            .eq('user_id', user.id)
             .order('timestamp', { ascending: false })
             .limit(5);
             
@@ -147,6 +146,7 @@ const DashboardPage = () => {
         .from('sync_logs')
         .insert([
           {
+            user_id: user.id,
             type: 'products',
             details: 'Manual sync initiated',
             status: 'success'
@@ -163,6 +163,7 @@ const DashboardPage = () => {
       const { data: logsData, error: logsError } = await supabaseClient
         .from('sync_logs')
         .select('*')
+        .eq('user_id', user.id)
         .order('timestamp', { ascending: false })
         .limit(5);
         
