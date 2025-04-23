@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabaseClient } from "@/hooks/useSupabase";
@@ -7,13 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { StoreTable } from "@/components/stores/StoreTable";
 import { AddStoreForm } from "@/components/stores/AddStoreForm";
+import { useStoreSync } from "@/hooks/useStoreSync";
+import { Loader2 } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 const ConnectionsPage = () => {
   const { user } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingStore, setIsAddingStore] = useState(false);
+  const [syncingStoreId, setSyncingStoreId] = useState<string | null>(null);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const { toast } = useToast();
+  const storeSync = useStoreSync();
   
   useEffect(() => {
     fetchStores();
@@ -148,19 +153,69 @@ const ConnectionsPage = () => {
   };
   
   const handleSyncStore = async (storeId: string) => {
-    try {
-      // TODO: Implement sync logic
-      toast({
-        title: "Sync Initiated",
-        description: "Sync initiated for store",
-      });
-    } catch (error) {
-      console.error("Error syncing store:", error);
+    console.log('[ConnectionsPage] Starting sync for store ID:', storeId);
+    
+    const store = stores.find(s => s.id === storeId);
+    if (!store) {
+      console.error('[ConnectionsPage] Store not found with ID:', storeId);
       toast({
         title: "Error",
-        description: "Failed to sync store",
+        description: "Store not found",
         variant: "destructive",
       });
+      return;
+    }
+
+    // Set syncing status to show loading indicator
+    setSyncingStoreId(storeId);
+    // Select this store to show its logs
+    setSelectedStoreId(storeId);
+    
+    console.log('[ConnectionsPage] Store found:', store);
+    
+    toast({
+      title: "Sync Initiated",
+      description: `Synchronizing data from ${store.store_name}...`,
+    });
+
+    try {
+      // Use our sync service to sync all data from the store
+      console.log('[ConnectionsPage] Calling storeSync.syncAll...');
+      const result = await storeSync.syncAll(store);
+      console.log('[ConnectionsPage] Sync completed with result:', result);
+      
+      if (result.success) {
+        toast({
+          title: "Sync Complete",
+          description: result.message,
+        });
+      } else {
+        console.warn('[ConnectionsPage] Sync completed with errors:', result.message);
+        toast({
+          title: "Sync Warning",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+
+      // Refresh the stores list to show any updates
+      console.log('[ConnectionsPage] Refreshing stores list...');
+      await fetchStores();
+      
+      // Force refresh of sync logs by doing a state update
+      console.log('[ConnectionsPage] Forcing refresh of selected store...');
+      setSelectedStoreId(null);
+      setTimeout(() => setSelectedStoreId(storeId), 100);
+      
+    } catch (error) {
+      console.error("[ConnectionsPage] Error syncing store:", error);
+      toast({
+        title: "Sync Error",
+        description: `Failed to sync store: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setSyncingStoreId(null);
     }
   };
   
@@ -180,18 +235,35 @@ const ConnectionsPage = () => {
             Manage your connected stores.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           <StoreTable 
             stores={stores}
             isLoading={isLoading}
             onSyncStore={handleSyncStore}
             onDeleteStore={handleDeleteStore}
+            syncingStoreId={syncingStoreId}
+            onSelectStore={setSelectedStoreId}
+            selectedStoreId={selectedStoreId}
           />
           
           <AddStoreForm 
             onAddStore={handleAddStore}
             isAddingStore={isAddingStore}
           />
+          
+          {selectedStoreId && (
+            <>
+              <Separator className="my-4" />
+              {/* <SyncLogsList storeId={selectedStoreId} limit={5} /> */}
+            </>
+          )}
+          
+          {!selectedStoreId && stores.length > 0 && (
+            <>
+              <Separator className="my-4" />
+              {/* <SyncLogsList limit={10} /> */}
+            </>
+          )}
         </CardContent>
       </Card>
     </div>
