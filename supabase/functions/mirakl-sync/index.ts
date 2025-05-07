@@ -167,7 +167,7 @@ async function processCSVStream(stream: ReadableStream<Uint8Array>, store: any, 
       if (done) {
         // Process any remaining items in the batch
         if (batch.length > 0) {
-          const result = await processOfferItems(batch, store, store.id, supabaseClient);
+          const result = await processProductItems(batch, store, store.id, supabaseClient);
           totalProcessed += result.processedCount;
           console.log(`Final batch processed with ${result.processedCount} items. Total: ${totalProcessed}`);
         }
@@ -196,11 +196,11 @@ async function processCSVStream(stream: ReadableStream<Uint8Array>, store: any, 
         const values = parseCSVLine(line);
         if (values.length === headers.length) {
           // Map CSV values to object using headers
-          const offer: any = {};
+          const product: any = {};
           headers.forEach((header, index) => {
             // Convert header like "product-sku" to "product_sku" for compatibility
             const key = header.replace(/-/g, '_');
-            offer[key] = values[index];
+            product[key] = values[index];
           });
           
           // Log complete raw data of the first product for debugging
@@ -209,17 +209,17 @@ async function processCSVStream(stream: ReadableStream<Uint8Array>, store: any, 
             console.log('HEADERS:', headers);
             console.log('RAW VALUES:', values);
             console.log('MAPPED FIELDS:');
-            Object.entries(offer).forEach(([key, value]) => {
+            Object.entries(product).forEach(([key, value]) => {
               console.log(`${key}: "${value}"`);
             });
             console.log('--------------------------------------------------------------------');
           }
           
-          batch.push(offer);
+          batch.push(product);
           
           // Process in batches
           if (batch.length >= BATCH_SIZE) {
-            const result = await processOfferItems(batch, store, store.id, supabaseClient);
+            const result = await processProductItems(batch, store, store.id, supabaseClient);
             totalProcessed += result.processedCount;
             console.log(`Batch processed with ${result.processedCount} items. Total so far: ${totalProcessed}`);
             batch = [];
@@ -267,9 +267,9 @@ function parseCSVLine(line: string): string[] {
   return values;
 }
 
-// Process offer items in batches, with individual inserts/updates
-async function processOfferItems(offers: any[], store: any, storeId: number | string, supabaseClient: any) {
-  console.log(`Processing batch of ${offers.length} offers`);
+// Process product items in batches, with individual inserts/updates
+async function processProductItems(products: any[], store: any, storeId: number | string, supabaseClient: any) {
+  console.log(`Processing batch of ${products.length} products`);
   
   // Get store user_id for product ownership before mapping products
   const userId = store.user_id;
@@ -279,14 +279,14 @@ async function processOfferItems(offers: any[], store: any, storeId: number | st
   const productDetails: Record<string, any> = {};
   
   // Only fetch details for the first batch to avoid too many API calls
-  if (offers.length > 0) {
+  if (products.length > 0) {
     try {
-      const skuToProcess = offers[0].product_sku;
+      const skuToProcess = products[0].product_sku;
       console.log(`Fetching product details for SKU: ${skuToProcess}`);
       
       const apiResponse = await fetchProductDetails(baseUrl, store.api_key, skuToProcess);
       
-      // Check if the response has the offers array format we saw
+      // Check if the response has the offers array format
       if (apiResponse && apiResponse.offers && Array.isArray(apiResponse.offers)) {
         console.log(`Found ${apiResponse.offers.length} offers with details via API`);
         
@@ -310,11 +310,11 @@ async function processOfferItems(offers: any[], store: any, storeId: number | st
     }
   }
   
-  // Map offers to products with proper field mapping based on CSV headers and API details
-  const products = offers.map(offer => {
-    const uniqueKey = offer.shop_sku && offer.shop_sku.trim() !== '' ? offer.shop_sku : null;
+  // Map products to products with proper field mapping based on CSV headers and API details
+  const productsToSave = products.map(product => {
+    const uniqueKey = product.shop_sku && product.shop_sku.trim() !== '' ? product.shop_sku : null;
     if (!uniqueKey) {
-      console.warn(`Offer ${offer.offer_id} skipped due to missing or empty shop_sku.`);
+      console.warn(`Product ${product.offer_id} skipped due to missing or empty shop_sku.`);
       return null;
     }
     
@@ -322,7 +322,7 @@ async function processOfferItems(offers: any[], store: any, storeId: number | st
     let title = 'Unnamed Product';
     let description = '';
     
-    const detailedInfo = offer.product_sku ? productDetails[offer.product_sku] : null;
+    const detailedInfo = product.product_sku ? productDetails[product.product_sku] : null;
     
     if (detailedInfo) {
       // Use detailed API data if available
@@ -330,38 +330,38 @@ async function processOfferItems(offers: any[], store: any, storeId: number | st
       description = detailedInfo.description || description;
     } else {
       // Fallback to CSV data
-      if (typeof offer.shop_name === 'string' && offer.shop_name.trim()) {
-        title = offer.shop_name.trim();
-      } else if (typeof offer.shop_sku === 'string' && offer.shop_sku.trim()) {
-        title = `Product ${offer.shop_sku.trim()}`;
+      if (typeof product.shop_name === 'string' && product.shop_name.trim()) {
+        title = product.shop_name.trim();
+      } else if (typeof product.shop_sku === 'string' && product.shop_sku.trim()) {
+        title = `Product ${product.shop_sku.trim()}`;
       }
     }
     
     return {
-      mirakl_product_sku: offer.product_sku || '',
+      mirakl_product_id: product.offer_id || '',
       title: title,
       description: description,
-      price: parseFloat(offer.price || 0),
-      currency: offer.currency_iso_code || 'USD',
+      price: parseFloat(product.price || 0),
+      currency: product.currency_iso_code || 'USD',
       sku: uniqueKey,
-      quantity: parseInt(offer.quantity || '0', 10),
+      quantity: parseInt(product.quantity || '0', 10),
       image_url: '' // No image URL available yet
     };
   }).filter(p => p !== null);
 
   // Log the first mapped product
-  if (products.length > 0) {
-    console.log('FIRST MAPPED PRODUCT:', JSON.stringify(products[0], null, 2));
+  if (productsToSave.length > 0) {
+    console.log('FIRST MAPPED PRODUCT:', JSON.stringify(productsToSave[0], null, 2));
   }
 
-  console.log(`Mapped ${products.length} valid products from offers`);
+  console.log(`Mapped ${productsToSave.length} valid products from products`);
   
   // Process products individually - more reliable than batch upsert
   let savedCount = 0;
   
   // Process each product individually
-  for (let i = 0; i < products.length; i++) {
-    const product = products[i];
+  for (let i = 0; i < productsToSave.length; i++) {
+    const product = productsToSave[i];
     
     try {
       // Check if product already exists
@@ -424,15 +424,15 @@ async function processOfferItems(offers: any[], store: any, storeId: number | st
       savedCount++;
       
       // Log progress periodically
-      if (savedCount % 10 === 0 || savedCount === products.length) {
-        console.log(`Progress: ${savedCount}/${products.length} products processed`);
+      if (savedCount % 10 === 0 || savedCount === productsToSave.length) {
+        console.log(`Progress: ${savedCount}/${productsToSave.length} products processed`);
       }
     } catch (itemError) {
       console.error(`Error processing product with SKU ${product.sku}:`, itemError);
     }
   }
   
-  console.log(`Successfully processed ${savedCount} out of ${products.length} products`);
+  console.log(`Successfully processed ${savedCount} out of ${productsToSave.length} products`);
   
   return {
     processedCount: savedCount

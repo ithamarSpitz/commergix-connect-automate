@@ -6,12 +6,13 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
  * Gets Mirakl offer data via direct CSV download (specific to this Mirakl instance)
  * @param domain Mirakl domain URL
  * @param apiKey Mirakl API key
+ * @param exportType Optional type of export ('offers' or 'products')
  * @returns Promise with the response stream
  */
-export async function launchExport(domain: string, apiKey: string): Promise<ReadableStream<Uint8Array>> {
-  console.log('Getting Mirakl offer data via direct CSV download (modified for superpharm-prod)');
+export async function launchExport(domain: string, apiKey: string, exportType: string = 'offers'): Promise<ReadableStream<Uint8Array>> {
+  console.log(`Getting Mirakl ${exportType} data via direct CSV download`);
 
-  const url = `${domain}/api/offers/export`;
+  const url = `${domain}/api/${exportType}/export`;
   const method = 'GET'; // Use GET to get direct CSV data
   console.log(`Attempting to ${method} to ${url}`);
 
@@ -271,7 +272,7 @@ export async function streamJSONLines(
 export async function fetchProductDetails(domain: string, apiKey: string, productSku: string): Promise<any> {
   console.log(`Fetching detailed info for product: ${productSku}`);
   
-  // Use the offers endpoint that was successful
+  // Continue to use the offers endpoint since it has proper permissions
   const url = `${domain}/api/offers?product_sku=${encodeURIComponent(productSku)}`;
   console.log(`Querying Mirakl API: ${url}`);
   
