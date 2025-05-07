@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Loader2, ChevronDown } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -21,13 +21,19 @@ interface StoreTableProps {
   isLoading: boolean;
   onSyncStore: (storeId: string) => void;
   onDeleteStore: (storeId: string) => void;
+  syncingStoreId?: string | null;
+  onSelectStore?: (storeId: string | null) => void;
+  selectedStoreId?: string | null;
 }
 
 export const StoreTable = ({ 
   stores, 
   isLoading, 
   onSyncStore,
-  onDeleteStore 
+  onDeleteStore,
+  syncingStoreId = null,
+  onSelectStore,
+  selectedStoreId = null
 }: StoreTableProps) => {
   if (isLoading) {
     return <p>Loading stores...</p>;
@@ -62,6 +68,43 @@ export const StoreTable = ({
     }
   };
 
+  // Function to render the sync button with loading state
+  const renderSyncButton = (store: Store) => {
+    const isSyncing = syncingStoreId === store.id;
+    
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => onSyncStore(store.id)}
+        disabled={isSyncing}
+      >
+        {isSyncing ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Syncing...
+          </>
+        ) : (
+          <>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Sync
+          </>
+        )}
+      </Button>
+    );
+  };
+
+  const handleRowClick = (store: Store) => {
+    if (onSelectStore) {
+      if (selectedStoreId === store.id) {
+        // If clicking on already selected row, deselect it
+        onSelectStore(null);
+      } else {
+        onSelectStore(store.id);
+      }
+    }
+  };
+
   return (
     <Table>
       <TableCaption>A list of your connected stores.</TableCaption>
@@ -75,8 +118,22 @@ export const StoreTable = ({
       </TableHeader>
       <TableBody>
         {stores.map((connection) => (
-          <TableRow key={connection.id}>
-            <TableCell>{connection.store_name}</TableCell>
+          <TableRow 
+            key={connection.id} 
+            className={selectedStoreId === connection.id 
+              ? "bg-muted hover:bg-muted cursor-pointer" 
+              : "hover:bg-muted/50 cursor-pointer"
+            }
+            onClick={() => handleRowClick(connection)}
+          >
+            <TableCell className="font-medium">
+              <div className="flex items-center">
+                {selectedStoreId === connection.id && (
+                  <ChevronDown className="mr-2 h-4 w-4" />
+                )}
+                {connection.store_name}
+              </div>
+            </TableCell>
             <TableCell>{connection.platform}</TableCell>
             <TableCell>
               <Badge 
@@ -93,14 +150,7 @@ export const StoreTable = ({
               {connection.status === 'pending' ? (
                 renderConnectionButton(connection)
               ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onSyncStore(connection.id)}
-                >
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Sync
-                </Button>
+                renderSyncButton(connection)
               )}
               <StoreDeleteDialog 
                 storeId={connection.id} 
