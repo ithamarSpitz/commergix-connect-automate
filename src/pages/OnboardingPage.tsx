@@ -11,7 +11,7 @@ const OnboardingPage = () => {
   
   const steps = [
     {
-      title: "Welcome to Commergix",
+      title: "Welcome to commegix",
       description: "Let's get your account set up and ready to go.",
       content: (
         <div className="flex flex-col items-center space-y-4 py-4">
@@ -63,7 +63,7 @@ const OnboardingPage = () => {
     },
     {
       title: "All Set!",
-      description: "You're ready to start using Commergix.",
+      description: "You're ready to start using commegix.",
       content: (
         <div className="flex flex-col items-center space-y-4 py-4">
           <div className="rounded-full bg-green-100 p-6">
@@ -71,7 +71,7 @@ const OnboardingPage = () => {
           </div>
           <h3 className="text-xl font-medium">Setup Complete</h3>
           <p className="text-center text-muted-foreground">
-            You've successfully set up your Commergix account. You can now start managing your products and orders.
+            You've successfully set up your commegix account. You can now start managing your products and orders.
           </p>
         </div>
       ),
