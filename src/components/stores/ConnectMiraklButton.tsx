@@ -76,15 +76,15 @@ export function ConnectMiraklButton({ storeId }: ConnectMiraklButtonProps) {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="apiUrl">API URL</Label>
+              <Label htmlFor="apiUrl">API Base URL</Label>
               <Input
                 id="apiUrl"
-                placeholder="https://your-marketplace.mirakl.net/api/orders"
+                placeholder="your-marketplace.mirakl.net" // Changed placeholder
                 value={apiUrl}
                 onChange={(e) => setApiUrl(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                The complete URL of your Mirakl API endpoint (e.g., https://your-marketplace.mirakl.net/api/orders)
+                Enter the base URL of your Mirakl instance (e.g., your-marketplace.mirakl.net). Do not include  https:// or /api/... paths.
               </p>
             </div>
           </div>

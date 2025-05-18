@@ -3,7 +3,22 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
+// Use the Service Role Key for elevated privileges
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+// Helper function for retrying async operations
+const retryAsync = async <T>(fn: () => Promise<T>, retries = 2, delay = 500): Promise<T> => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (retries <= 0) {
+      throw error;
+    }
+    await new Promise(resolve => setTimeout(resolve, delay));
+    console.log(`Retrying database operation... (${retries} retries left)`)
+    return retryAsync(fn, retries - 1, delay);
+  }
+};
 
 // This edge function validates Mirakl API credentials and updates the store
 serve(async (req) => {
@@ -13,8 +28,10 @@ serve(async (req) => {
   }
   
   try {
-    // Create a Supabase client
-    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Create a Supabase client using the Service Role Key
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false } // Important for server-side usage
+    });
     
     // Extract request data
     let requestBody;
@@ -54,33 +71,37 @@ serve(async (req) => {
     }
     
     // Use the API URL exactly as provided in the request
-    const miraklApiUrl = apiUrl.trim();
-    console.log('Using Mirakl API URL:', miraklApiUrl);
+    const miraklApiUrlBase = apiUrl.trim().replace(/\/$/, ''); // Ensure no trailing slash
+    console.log('Using Mirakl API Base URL:', miraklApiUrlBase);
     
+    // Construct a specific endpoint URL for validation
+    const validationUrl = `https://${miraklApiUrlBase}/api/orders?limit=1`; // Example: fetch first order
+    console.log('Attempting validation with URL:', validationUrl);
+
     // Validate the API credentials by making a test call to the Mirakl API
     try {
       // Using the exact format from the working example
-      console.log('Testing Mirakl API with exact implementation from working example...');
+      console.log('Testing Mirakl API with a specific endpoint...');
       
-      const response = await fetch(miraklApiUrl, {
+      const response = await fetch(validationUrl, { // Use the specific validation URL
         headers: {
           'Authorization': apiKey,
-          'Content-Type': 'application/json'
+          'Accept': 'application/json' // Often required by Mirakl APIs
         },
-        // Using params in the actual URL query string since we don't need them for the test
-        // This just verifies the connection works
+        // No body needed for a simple GET request like orders
       });
       
-      console.log('Mirakl API response status:', response.status);
+      console.log('Mirakl API validation response status:', response.status);
       
       if (!response.ok) {
         let errorText = '';
         try {
-          errorText = await response.text();
+          errorText = await response.text(); // Try to get the response body
         } catch (e) {
-          // Ignore error reading response body
+          errorText = 'Could not read error response body.';
         }
-        
+        // Log the detailed error
+        console.error(`Mirakl API validation failed. Status: ${response.status}, StatusText: ${response.statusText}, Body: ${errorText}`);
         throw new Error(`API validation failed with status: ${response.status}. Response: ${errorText}`);
       }
       
@@ -96,52 +117,52 @@ serve(async (req) => {
       
     } catch (apiError) {
       console.error('API validation error:', apiError);
+      // Add the URL tried in the error message
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: `Failed to validate Mirakl API credentials: ${apiError.message}` 
+          message: `Failed to validate Mirakl API credentials at ${validationUrl}. Please check URL and API Key. Error: ${apiError.message}` 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     
-    // Get the store from the database to verify it exists
+    // Get the store from the database, with retries
     try {
-      const { data: storeData, error: storeError } = await supabaseClient
-        .from('stores')
-        .select('*')
-        .eq('id', storeId)
-        .single();
+      const getStore = async () => {
+        console.log(`Attempting to find store with ID: ${storeId}`);
+        const { data: storeData, error: storeError } = await supabaseClient
+          .from('stores')
+          .select('*')
+          .eq('id', storeId)
+          .single();
+
+        if (storeError) {
+          // Throw specific error if not found, otherwise log and throw generic
+          if (storeError.code === 'PGRST116') { // PostgREST code for "exact one row expected, 0 rows returned"
+             console.warn(`Store with ID ${storeId} not found on this attempt.`);
+             throw new Error(`Store not found (ID: ${storeId}) - will retry if possible.`);
+          } else {
+            console.error('Error finding store:', storeError);
+            throw new Error(`Error finding store: ${storeError.message}`);
+          }
+        }
+        if (!storeData) { // Should be covered by PGRST116, but double-check
+          console.warn(`Store data is null for ID ${storeId} on this attempt.`);
+          throw new Error(`Store not found (ID: ${storeId}) - will retry if possible.`);
+        }
+        return storeData;
+      };
+
+      const storeData = await retryAsync(getStore);
       
-      if (storeError) {
-        console.error('Error finding store:', storeError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: `Error finding store: ${storeError.message}` 
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      if (!storeData) {
-        console.error('Store not found:', storeId);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: 'Store not found' 
-          }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      console.log('Found store:', storeData.id);
+      console.log('Found store after potentially retrying:', storeData.id);
       
       // Update the store with the Mirakl credentials and set status to active
       const { error: updateError } = await supabaseClient
         .from('stores')
         .update({
-          domain: miraklApiUrl,
+          domain: miraklApiUrlBase, // Store the base URL
           api_key: apiKey,
           status: 'active',
         })
@@ -169,13 +190,18 @@ serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (dbError) {
-      console.error('Database operation error:', dbError);
+      console.error('Database operation error (final attempt):', dbError);
+      // Make error message more specific if it's the store not found error
+      const finalMessage = dbError.message.includes('Store not found') 
+        ? `Store with ID ${storeId} could not be found after retries.`
+        : `Database error: ${dbError.message}`;
+
       return new Response(
         JSON.stringify({ 
           success: false, 
-          message: `Database error: ${dbError.message}` 
+          message: finalMessage 
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } } // Use 500 for internal errors like DB issues
       );
     }
     
