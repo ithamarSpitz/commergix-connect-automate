@@ -105,7 +105,7 @@ export function Header() {
         <div className="flex items-center gap-4">
           <Link to="/" className="flex items-center space-x-2">
             <Package className="h-5 w-5" />
-            <span className="font-bold text-xl hidden md:inline-block">Commergix</span>
+            <span className="font-bold text-xl hidden md:inline-block">commegix</span>
           </Link>
           {!isMobile && <MainNav className="mx-6 hidden md:flex" />}
         </div>

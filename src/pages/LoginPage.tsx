@@ -101,7 +101,7 @@ const LoginPage = () => {
     <div className="h-screen flex flex-col sm:flex-row">
       <div className="hidden sm:flex sm:w-1/2 bg-primary items-center justify-center flex-col p-8 text-white">
         <Box className="h-20 w-20 mb-4" />
-        <h1 className="text-4xl font-bold mb-4">Commergix</h1>
+        <h1 className="text-4xl font-bold mb-4">commegix</h1>
         <p className="text-xl mb-6 text-center">
           All-in-one e-commerce & dropshipping automation platform
         </p>
@@ -129,7 +129,7 @@ const LoginPage = () => {
         <div className="w-full max-w-md space-y-6">
           <div className="text-center sm:hidden">
             <Box className="h-12 w-12 inline-block text-primary mb-2" />
-            <h1 className="text-2xl font-bold">Commergix</h1>
+            <h1 className="text-2xl font-bold">commegix</h1>
             <p className="text-muted-foreground">
               All-in-one e-commerce platform
             </p>

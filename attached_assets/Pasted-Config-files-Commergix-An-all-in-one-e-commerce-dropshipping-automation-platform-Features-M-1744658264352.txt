@@ -1,5 +1,5 @@
 Config files
-Commergix
+commegix
 An all-in-one e-commerce & dropshipping automation platform.
 
 Features
@@ -33,8 +33,8 @@ Mirakl, Chita, and DHL accounts (for full functionality)
 Local Development
 Clone the repository
 
-git clone https://github.com/yourusername/commergix.git
-cd commergix
+git clone https://github.com/yourusername/commegix.git
+cd commegix
 Install dependencies
 
 pnpm install

@@ -75,7 +75,7 @@ serve(async (req) => {
     console.log('Using Mirakl API Base URL:', miraklApiUrlBase);
     
     // Construct a specific endpoint URL for validation
-    const validationUrl = `${miraklApiUrlBase}/api/orders?limit=1`; // Example: fetch first order
+    const validationUrl = `https://${miraklApiUrlBase}/api/orders?limit=1`; // Example: fetch first order
     console.log('Attempting validation with URL:', validationUrl);
 
     // Validate the API credentials by making a test call to the Mirakl API

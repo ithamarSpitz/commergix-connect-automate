@@ -9,6 +9,9 @@ interface SyncResponse {
   syncedItems?: number;
 }
 
+const supabaseUrl = "https://tueobdgcahbccqznnhjc.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1ZW9iZGdjYWhiY2Nxem5uaGpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQzODI1NTYsImV4cCI6MjA1OTk1ODU1Nn0.Hk9dxqu_WPZa7Vsn-PBO7kA2BRM39qxNQr1-6rNY4QA";
+
 // Helper function for delays
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -331,7 +334,7 @@ export const useStoreSync = () => {
       
       // GraphQL query to fetch products
       const query = `{
-        products(first: 50) {
+        products(first: 90) {
           edges {
             node {
               id
@@ -464,220 +467,62 @@ export const useStoreSync = () => {
       };
     }
   };
-
   // Platform-specific implementation for Mirakl
   const syncMiraklProducts = async (store: Store): Promise<SyncResponse> => {
     console.log('[Sync] Starting Mirakl products sync for store:', store.store_name);
 
-    try {
-      if (!store.domain || !store.api_key) {
+    try {      if (!store.domain || !store.api_key) {
         console.error('[Sync] Missing Mirakl credentials for store:', store.store_name);
         return { success: false, message: "Missing Mirakl credentials" };
       }
 
       console.log('[Sync] Using Edge Function proxy for Mirakl API call with fullSync=true');
-      const miraklEndpoint = '/api/offers';
-      const supabaseUrl = "https://tueobdgcahbccqznnhjc.supabase.co";
-      const edgeFunctionUrl = `${supabaseUrl}/functions/v1/mirakl-sync`;
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR1ZW9iZGdjYWhiY2Nxem5uaGpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQzODI1NTYsImV4cCI6MjA1OTk1ODU1Nn0.Hk9dxqu_WPZa7Vsn-PBO7kA2BRM39qxNQr1-6rNY4QA";
 
-      // Let the edge function handle the pagination process
-      console.log('[Sync] Starting batch-based full sync through edge function');
-      
-      try {
-        // Initialize sync state for direct offset-based pagination
-        let currentOffset = 0;
-        let totalItems = 0;
-        let totalProcessed = 0;
-        let processedCount = 0;
-        let progress = 0;
-        let batchCount = 0;
-        let needsMoreBatches = true;
-        
-        // Maximum retries for a single batch
-        const maxRetries = 3;
-        // Maximum number of batches to process (safety limit)
-        const maxBatches = 30;
-        
-        // Loop until all data is processed (all batches complete)
-        while (needsMoreBatches && batchCount < maxBatches) {
-          batchCount++;
-          console.log(`[Sync] Processing batch #${batchCount} at offset ${currentOffset}, progress: ${progress}%`);
-          
-          let currentRetries = 0;
-          let batchSuccess = false;
-          
-          while (!batchSuccess && currentRetries < maxRetries) {
-            try {
-              // Make request to edge function with current offset
-              console.log(`[Sync] Making edge function request with:`, {
-                storeId: store.id,
-                endpoint: miraklEndpoint,
-                fullSync: true,
-                offset: currentOffset
-              });
-              
-              const response = await fetch(edgeFunctionUrl, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-                  "apikey": SUPABASE_ANON_KEY
-                },
-                body: JSON.stringify({
-                  storeId: store.id,
-                  endpoint: miraklEndpoint,
-                  offset: currentOffset,
-                  fullSync: true,
-                  pageSize: 90
-                })
-              });
-              
-              // Handle Rate Limiting (429)
-              if (response.status === 429) {
-                const retryAfterHeader = response.headers.get('Retry-After') || '30';
-                const retryAfter = parseInt(retryAfterHeader, 10) * 1000;
-                console.log(`[Sync] Rate limit exceeded. Waiting ${retryAfter/1000} seconds before retry...`);
-                await sleep(retryAfter);
-                currentRetries++;
-                continue;
-              }
-              
-              // Handle other errors
-              if (!response.ok) {
-                console.error(`[Sync] API error status: ${response.status}`);
-                let errorMessage = `Mirakl API error: ${response.statusText}`;
-                let errorData;
-                
-                try {
-                  errorData = await response.json();
-                  errorMessage = errorData.message || errorData.error || errorMessage;
-                  console.error('[Sync] API error response:', response.status, errorData);
-                } catch (e) {
-                  console.error('[Sync] Failed to parse error response:', e);
-                  try {
-                    const errorText = await response.text();
-                    console.error('[Sync] Raw error response:', errorText);
-                  } catch (textError) {
-                    console.error('[Sync] Could not read error response as text');
-                  }
-                }
-                
-                throw new Error(errorMessage);
-              }
-              
-              // Process successful response
-              const responseData = await response.json();
-              console.log(`[Sync] Batch #${batchCount} response:`, responseData);
-
-              // Check if the edge function accepted the job (async flow)
-              if (responseData.accepted === true) {
-                console.log(`[Sync] Background sync job started successfully for batch #${batchCount}.`);
-                // For the async flow, we return success immediately on the frontend.
-                // The actual sync happens in the background.
-                // We can assume the initial call worked, no need to loop here.
-                return {
-                  success: true,
-                  message: 'Mirakl product sync job initiated successfully.',
-                  syncedItems: 0 // Indicate 0 for now, as sync is background
-                };
-              }
-
-              // --- This part below is likely for a synchronous response, which we aren't getting ---
-              // --- Keeping it for now, but the 'accepted' check above should handle the async case ---
-
-              if (!responseData.success) {
-                throw new Error(responseData.message || 'Edge function returned failure status');
-              }
-
-              // Check if we need to continue with another batch
-              needsMoreBatches = responseData.needsMoreBatches === true;
-              
-              // Update our tracking variables
-              if (responseData.totalItems) {
-                totalItems = responseData.totalItems;
-              }
-              
-              if (responseData.processedSoFar) {
-                totalProcessed = responseData.processedSoFar;
-              }
-              
-              if (responseData.processedCount) {
-                processedCount += responseData.processedCount;
-              }
-              
-              if (responseData.progress) {
-                progress = responseData.progress;
-              }
-              
-              // Get next offset if we need more batches
-              if (needsMoreBatches && responseData.nextOffset) {
-                currentOffset = responseData.nextOffset;
-              }
-              
-              batchSuccess = true;
-              
-              if (needsMoreBatches) {
-                console.log(`[Sync] Batch #${batchCount} completed. Progress: ${progress}%. Continuing with next batch at offset ${currentOffset}.`);
-                
-                // Add a small delay between batches
-                await sleep(1000);
-              } else {
-                // Final batch completed
-                console.log(`[Sync] Full sync completed. Processed ${processedCount} products.`);
-                
-                return {
-                  success: true,
-                  message: responseData.message || `Successfully synced ${processedCount} products from Mirakl`,
-                  syncedItems: processedCount
-                };
-              }
-            } catch (batchError) {
-              // Handle batch errors
-              console.error(`[Sync] Batch #${batchCount} error (attempt ${currentRetries + 1}/${maxRetries}):`, batchError);
-              currentRetries++;
-              
-              // Wait before retrying
-              if (currentRetries < maxRetries) {
-                await sleep(5000 * currentRetries);
-              } else {
-                throw new Error(`Failed to process batch #${batchCount} after ${maxRetries} attempts: ${batchError.message}`);
-              }
-            }
-          }
-          
-          if (!batchSuccess) {
-            throw new Error(`Failed to process batch #${batchCount} after ${maxRetries} attempts`);
-          }
-        }
-        
-        // If we reached max batches but still have more to process
-        if (needsMoreBatches) {
-          console.warn(`[Sync] Reached maximum number of batches (${maxBatches}) but more data remains. Progress: ${progress}%`);
-          return {
-            success: true,
-            message: `Partially synced ${processedCount} products from Mirakl (reached maximum batch limit)`,
-            syncedItems: processedCount
-          };
-        }
-        
-        // This should rarely be reached due to the return in the else block above
-        return {
-          success: true,
-          message: `Successfully synced ${processedCount} products from Mirakl`,
-          syncedItems: processedCount
-        };
-      } catch (error) {
-        console.error('[Sync] Error during full sync:', error);
-        throw error;
+      //call getOffersCount function below to get the number of offers in Mirakl
+      const countResponse = await getOffersCount(store.id);
+      if (!countResponse) {
+        console.error('[Sync] Error getting offers count:');
+        return { success: false, message: `Error getting offers count` };
       }
-    } catch (error) {
+      const totalOffers = countResponse || 0;
+      console.log('[Sync] Total offers in Mirakl:', totalOffers);
+      if (totalOffers === 0) {
+        console.log('[Sync] No offers to sync from Mirakl');
+        return { success: true, message: "No offers to sync from Mirakl", syncedItems: 0 };
+      }
+  
+      // Sync in batches of 900
+      const batchCount = Math.ceil(totalOffers / 900);
+      for (let i = 0; i < batchCount; i++) {
+        const offset = (i * 900).toString();
+        console.log(`[Sync] Syncing batch ${i + 1} of ${batchCount} with offset ${offset}`);
+        const syncResponse = await sync900MiraklProducts(store.id, offset);
+        if (!syncResponse) {
+          console.error('[Sync] Error syncing products from Mirakl:');
+          return { success: false, message: `Error syncing products from Mirakl` };
+        }
+        if (i === batchCount - 1) {
+          console.log('[Sync] Last batch synced successfully'); 
+        }else {
+          console.log('[Sync] Batch synced successfully, waiting for 60 seconds before next batch');
+          await sleep(60000); // Delay between batches
+        }
+      }
+      
+      console.log('[Sync] Successfully synced products from Mirakl');
+      return {
+        success: true,
+        message: `Successfully synced products from Mirakl`,
+        syncedItems: totalOffers
+      };
+    } catch (error) { 
       console.error("[Sync] Mirakl product sync error:", error);
       return {
         success: false,
         message: `Failed to sync Mirakl products: ${error.message}`
       };
     }
+
   };
 
   // Placeholder implementations for order sync
@@ -733,3 +578,53 @@ export const useStoreSync = () => {
     syncAll
   };
 };
+
+// function that returns the number of offers in Mirakl
+const getOffersCount = async (storeId: string): Promise<number> => {
+        const getCountFunctionUrl = `${supabaseUrl}/functions/v1/mirakl-count-offers`;
+
+  const response = await fetch(getCountFunctionUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "apikey": SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({
+            storeId: storeId,
+          })
+        });
+
+  if (!response.ok) {
+    throw new Error(`Error fetching offers count: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  console.log('Offers count response:', data);
+  return data.count;
+}
+
+// function that syncs up to 900 products from Mirakl
+const sync900MiraklProducts = async (storeId: string, offset: string): Promise<SyncResponse> => {
+  const syncFunctionUrl = `${supabaseUrl}/functions/v1/mirakl-sync-900`;
+  const response = await fetch(syncFunctionUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "apikey": SUPABASE_ANON_KEY
+    },
+    body: JSON.stringify({
+      storeId: storeId,
+      offset: offset,
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error syncing products: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  console.log('Sync response:', data);
+  return data;
+}
