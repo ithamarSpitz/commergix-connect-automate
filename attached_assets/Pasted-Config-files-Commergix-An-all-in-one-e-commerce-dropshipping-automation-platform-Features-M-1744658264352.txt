@@ -1,0 +1,75 @@
+Config files
+commegix
+An all-in-one e-commerce & dropshipping automation platform.
+
+Features
+Multi-platform integration (Shopify, Mirakl)
+Product management and synchronization
+Order processing and fulfillment
+Shipping automation with Chita and DHL
+Usage-based and subscription billing with Stripe
+Tech Stack
+Frontend: Next.js 14 (React, TypeScript, App Router), Tailwind CSS, shadcn/ui
+Backend: Supabase (PostgreSQL, Auth, Storage, Edge Functions)
+Payments: Stripe (Checkout, Metered billing)
+Deployment: Vercel (frontend), Supabase cloud (backend)
+Project Structure
+/
+ ├─ apps/
+ │   └─ web/          # Next.js project (TypeScript)
+ ├─ supabase/
+ │   ├─ migrations/   # SQL files for schema
+ │   └─ functions/    # Edge Functions (TypeScript)
+ ├─ .env.example      # env variable template
+ └─ package.json
+Setup Instructions
+Prerequisites
+Node.js 18+
+pnpm or npm
+Supabase account
+Stripe account
+Shopify Partner account (for app development)
+Mirakl, Chita, and DHL accounts (for full functionality)
+Local Development
+Clone the repository
+
+git clone https://github.com/yourusername/commegix.git
+cd commegix
+Install dependencies
+
+pnpm install
+Copy the .env.example file to .env.local and fill in your environment variables
+
+cp .env.example .env.local
+Start the development server
+
+pnpm dev
+Open http://localhost:3000 with your browser
+
+Database Setup
+Link your Supabase project
+
+supabase link --project-ref your-project-ref
+Push migrations to Supabase
+
+supabase db push
+Seed the database (optional)
+
+supabase db execute < supabase/seed.sql
+Edge Functions Deployment
+supabase functions deploy --project-ref your-project-ref
+Usage
+Create an account or login
+Complete the onboarding steps:
+Connect your Shopify store
+Set up Mirakl (if applicable)
+Configure shipping preferences
+Set up billing
+Start managing your products, orders, and fulfillments
+License
+MIT
+
+45ms
+ • 
+Just now
+Exited with code: 16 output:Bun's lockfile format has changed from bun.lockb to bun.lock. --> bun install --save-text-lockfile --frozen-lockfile --lockfile-only bun install v1.2.3 (8c4d3ff8) Resolving dependencies Resolved, downloaded and extracted [0] error: lockfile had changes, but lockfile is frozen note: try re-running without --frozen-lockfile and commit the updated lockfile exit status 1

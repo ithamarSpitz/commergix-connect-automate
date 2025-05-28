@@ -1,0 +1,8 @@
+project_id = "tueobdgcahbccqznnhjc"
+
+# Individual function configurations
+[functions.mirakl-sync]
+verify_jwt = false
+
+[functions.dashboard-stats]
+verify_jwt = true
