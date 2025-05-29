@@ -159,116 +159,137 @@ export async function getOrdersCount(domain: string, apiKey: string): Promise<an
 }
 
 /**
- * parses the orders data from the Mirakl API into product table format
- * @param orders The order data to update
+ * parses the orders data from the Mirakl API into orders table format
+ * @param miraklOrders The Mirakl order data to parse
  * @param owner_user_id The user ID of the owner
  * @param store_id The store ID
- * @returns Promise with the products
+ * @returns Promise with the orders and customers arrays
  */
 
-export async function parseOrders(orders: any[], owner_user_id: string, store_id: string ): Promise<any[]> {
-  const products: any[] = [];
-  const skuMap = new Map(); // To track SKUs and detect duplicates
-  const duplicateSkus = new Map(); // To store duplicate SKUs and their count
+export async function parseOrders(miraklOrders: any[], owner_user_id: string, store_id: string ): Promise<[any[], any[]]> {
+  const orders: any[] = [];
+  const orderItems: any[] = [];
+  const customers: any[] = [];
   
-  console.log(`Starting to parse ${orders.length} orders`);
-  
-  for (const order of orders) {
-    const product = {
-      id: crypto.randomUUID(),
-      sku: order.product_sku,
-      title: order.product_title,
-      description: order.product_description,
-      //category: order.category_label,
-      //brand: order.product_brand,
-      price: order.total_price,
-      currency: order.currency_iso_code,
-      is_shared: false,
-      created_at: new Date(), // Use current timestamp
-      updated_at: new Date(), // Use current timestamp
-      image_url: "",
-      inventory: order.quantity,
+
+  console.log(`Starting to parse ${miraklOrders.length} orders`);
+  for (const miraklOrder of miraklOrders) {    const customer = {
+      first_name: miraklOrder.customer?.first_name || '',
+      last_name: miraklOrder.customer?.last_name || '',
+      external_id: miraklOrder.customer?.email || miraklOrder.customer?.customer_id || '',
+      country: miraklOrder.customer?.shipping_address?.country_iso_code || 
+               miraklOrder.customer?.billing_address?.country_iso_code || '',
+      phone_number: miraklOrder.customer?.shipping_address?.phone || 
+               miraklOrder.customer?.billing_address?.phone || '0',
+      city: miraklOrder.customer?.shipping_address?.city || 
+            miraklOrder.customer?.billing_address?.city || '',
+    };    customers.push(customer);
+    // Safely handle order_lines with optional chaining
+    const lineItems = miraklOrder.order_lines?.map((item: any) => ({
+      sku: item.sku || '',
+      quantity: item.quantity || 0,
+      price: item.price || 0,
+      total_price: item.total_price || 0,
+      order_id: miraklOrder.commercial_id || '',
+    })) || [];
+    
+    // Create order with null checks for all properties
+    const order = {
       store_id: store_id,
-      owner_user_id: owner_user_id
+      commercial_id: miraklOrder.commercial_id,
+      provider_order_id : miraklOrder.order_id,
+      customer_id: customer.external_id,
+      owner_user_id: owner_user_id,
+      shipping_address: miraklOrder.customer.shipping_address || "",
+      billing_address: miraklOrder.customer.billing_address || "",
+      order_date: new Date(miraklOrder.created_date),
+      shipping_date: new Date(miraklOrder.shipped_date),
+      recieved_date: new Date(miraklOrder.received_date),
+      total_amount: miraklOrder.total_price,
+      currency: miraklOrder.currency_iso_code,
+      commission: miraklOrder.total_commission,
+      status: miraklOrder.order_state,
+      raw_data: miraklOrder,
     };
-    
-    // Track SKUs to detect duplicates
-    if (product.sku) {
-      if (skuMap.has(product.sku)) {
-        // This is a duplicate SKU
-        if (!duplicateSkus.has(product.sku)) {
-          // First time seeing this duplicate, initialize count to 1 (for the original)
-          duplicateSkus.set(product.sku, 1);
-        }
-        // Increment the count
-        duplicateSkus.set(product.sku, duplicateSkus.get(product.sku) + 1);
-      } else {
-        skuMap.set(product.sku, product);
-      }
-    }
-    
-    products.push(product);
+    orders.push(order);
   }
-  
-  console.log(`Parsed ${products.length} products from orders`);
-  
-  // Log duplicate SKUs if there are any
-  if (duplicateSkus.size > 0) {
-    console.log(`------ FOUND ${duplicateSkus.size} DUPLICATE SKUs ------`);
-    for (const [sku, count] of duplicateSkus.entries()) {
-      console.log(`SKU: ${sku} appears ${count + 1} times`); // +1 because we count the original as well
-      
-      // Find and log all products with this SKU for debugging
-      const productsWithThisSku = products.filter(p => p.sku === sku);
-      console.log(`Products with SKU ${sku}:`, JSON.stringify(productsWithThisSku, null, 2));
-    }
-    console.log(`------ END OF DUPLICATE SKUs ------`);
-  } else {
-    console.log('No duplicate SKUs found.');
-  }
-  
-  return products;
+  console.log(`Parsed ${orders.length} orders from mirakl orders`);
+  return [orders, customers];
 }
 
 /**
- * Deduplicates products array by removing duplicate SKUs
- * @param products The array of products to deduplicate
- * @returns Deduplicated products array
+ * Deduplicates orders array by removing duplicate commercial_ids
+ * @param orders The array of orders to deduplicate
+ * @returns Deduplicated orders array
  */
-function deduplicateProducts(products: any[]): any[] {
-  const skuSet = new Set<string>();
-  const skuDuplicates: string[] = [];
+function deduplicateOrders(orders: any[]): any[] {
+  const commercialIdSet = new Set<string>();
+  const commercialIdDuplicates: string[] = [];
   
-  // Find duplicate SKUs
-  for (const product of products) {
-    if (skuSet.has(product.sku)) {
-      skuDuplicates.push(product.sku);
+  // Find duplicate commercial ids
+  for (const order of orders) {
+    if (commercialIdSet.has(order.commercial_id)) {
+      commercialIdDuplicates.push(order.commercial_id);
     } else {
-      skuSet.add(product.sku);
+      commercialIdSet.add(order.commercial_id);
     }
   }
   
-  if (skuDuplicates.length > 0) {
-    console.error(`Found ${skuDuplicates.length} duplicate SKUs within the products array`);
-    console.log('Duplicate SKUs:', skuDuplicates);
+  if (commercialIdDuplicates.length > 0) {
+    console.error(`Found ${commercialIdDuplicates.length} duplicate commercial ids within the orders array`);
+    console.log('Duplicate commercial ids:', commercialIdDuplicates);
     
-    // Keep only first occurrence of each SKU
-    const uniqueProducts = products.filter((product, index, self) => 
-      index === self.findIndex(p => p.sku === product.sku)
+    // Keep only first occurrence of each commercial id
+    const uniqueOrders = orders.filter((order, index, self) => 
+      index === self.findIndex(p => p.commercial_id === order.commercial_id)
     );
-    console.log(`Filtered out ${products.length - uniqueProducts.length} duplicate products`);
-    return uniqueProducts;
+    console.log(`Filtered out ${orders.length - uniqueOrders.length} duplicate orders`);
+    return uniqueOrders;
   }
   
-  return products;
+  return orders;
 }
 
 /**
- * Updates products in supabase using upsert functionality
- * @param products The product data to update 
+ * Deduplicates customers array by removing duplicate external_ids
+ * @param customers The array of customers to deduplicate
+ * @returns Deduplicated customers array
+ */
+function deduplicateCustomers(customers: any[]): any[] {
+  const externalIdSet = new Set<string>();
+  const externalIdDuplicates: string[] = [];
+  
+  // Find duplicate external ids
+  for (const customer of customers) {
+    if (externalIdSet.has(customer.external_id)) {
+      externalIdDuplicates.push(customer.external_id);
+    } else {
+      externalIdSet.add(customer.external_id);
+    }
+  }
+  
+  if (externalIdDuplicates.length > 0) {
+    console.error(`Found ${externalIdDuplicates.length} duplicate external ids within the customers array`);
+    console.log('Duplicate external ids:', externalIdDuplicates);
+    
+    // Keep only first occurrence of each external id
+    const uniqueCustomers = customers.filter((customer, index, self) => 
+      index === self.findIndex(p => p.external_id === customer.external_id)
+    );
+    console.log(`Filtered out ${customers.length - uniqueCustomers.length} duplicate customers`);
+    return uniqueCustomers;
+  }
+  
+  return customers;
+}
+
+/**
+ * Updates orders in supabase using upsert functionality
+ * @param orders The orders data to update 
+ * @param customers The customers data to update
  * @returns Promise with the status
  */
-export async function updateProducts(products: any[]): Promise<any> {
+export async function updateOrders(orders: any[]): Promise<any> {
   // Get environment variables for Supabase connection
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -277,54 +298,99 @@ export async function updateProducts(products: any[]): Promise<any> {
     throw new Error('Missing required Supabase environment variables');
   }
 
-  if (products.length === 0) {
-    console.log('No products to update');
-    return { count: 0, message: 'No products to update' };
+  if (orders.length === 0) {
+    console.log('No orders to update');
+    return { count: 0, message: 'No orders to update' };
   }
 
-  console.log(`Preparing to upsert ${products.length} products into the database`);
+  console.log(`Preparing to upsert ${orders.length} orders into the database`);
   
   // Create Supabase client
   const supabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false }
   });
   
-  // First, remove duplicate SKUs from the input array
-  const uniqueProducts = deduplicateProducts(products);
+  // First, remove duplicate commercial ids from the input array
+  const uniqueOrders = deduplicateOrders(orders);
   
-  // If after deduplication we have no products, return early
-  if (uniqueProducts.length === 0) {
-    return { count: 0, message: 'No unique products to update' };
+  // If after deduplication we have no orders, return early
+  if (uniqueOrders.length === 0) {
+    return { count: 0, message: 'No unique orders to update' };
   }
   
   try {
     // Use upsert with onConflict targeting the owner_user_id and sku columns
     const { data, error } = await supabaseClient
-      .from('products')
-      .upsert(uniqueProducts, {
-        onConflict: 'owner_user_id,sku', // Specify the constraint columns
+      .from('orders')
+      .upsert(uniqueOrders, {
+        onConflict: 'store_id,commercial_id', // Specify the constraint columns
         ignoreDuplicates: false // Update existing rows instead of ignoring
       });
     
     if (error) {
-      console.log('Error with products upsert. First few products:');
-      uniqueProducts.slice(0, 5).forEach((product, index) => {
-        console.log(`Product ${index}: SKU=${product.sku}, ID=${product.id}`);
-      });
-      console.error('Error upserting products:', error);
-      throw new Error(`Failed to upsert products: ${error.message}`);
+      console.error('Error upserting orders:', error);
+      throw new Error(`Failed to upsert orders: ${error.message}`);
     }
     
-    console.log(`Successfully upserted ${uniqueProducts.length} products into the database`);
-    return { count: uniqueProducts.length };
+    console.log(`Successfully upserted ${uniqueOrders.length} orders into the database`);
+    return { count: uniqueOrders.length };
   } catch (upsertError) {
-    console.error('Exception during product upsert operation:', upsertError);
+    console.error('Exception during orders upsert operation:', upsertError);
+    throw upsertError;
+  }
+}
+
+export async function updateCustomers(customers: any[]): Promise<any> {
+  // Get environment variables for Supabase connection
+  const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Missing required Supabase environment variables');
+  }
+  if (customers.length === 0) {
+    console.log('No customers to update');
+    return { count: 0, message: 'No customers to update' };
+  }
+
+  console.log(`Preparing to upsert ${customers.length} customers into the database`);
+  
+  // Create Supabase client
+  const supabaseClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false }
+  });
+  
+  // First, remove duplicate external_ids from the input array
+  const uniqueCustomers = deduplicateCustomers(customers);
+  
+  // If after deduplication we have no customers, return early
+  if (uniqueCustomers.length === 0) {
+    return { count: 0, message: 'No unique customers to update' };
+  }
+  
+  try {
+    // Use upsert with onConflict targeting the external_id column
+    const { data, error } = await supabaseClient
+      .from('customers')
+      .upsert(uniqueCustomers, {
+        onConflict: 'external_id', // Specify the constraint column
+        ignoreDuplicates: false // Update existing rows instead of ignoring
+      });
+      if (error) {
+      console.error('Error upserting customers:', error);
+      throw new Error(`Failed to upsert customers: ${error.message}`);
+    }
+    
+    console.log(`Successfully upserted ${uniqueCustomers.length} customers into the database`);
+    return { count: uniqueCustomers.length };
+  } catch (upsertError) {
+    console.error('Exception during customers upsert operation:', upsertError);
     throw upsertError;
   }
 }
 
 /**
- * handle the proccess from getting the 900 orders to updating the products
+ * handle the proccess from getting the 900 orders to updating the orders
  * @param domain Mirakl domain URL
  * @param apiKey Mirakl API key
  * @param storeId The store ID
@@ -332,22 +398,22 @@ export async function updateProducts(products: any[]): Promise<any> {
  * @param offset for pagination
  * @returns Promise with the status
  */
-export async function handleMiraklProcessFor900Products(domain: string, apiKey: string, storeId: string, ownerUserId: string, offset: string): Promise<any> {
+export async function handleMiraklProcessFor900Orders(domain: string, apiKey: string, storeId: string, ownerUserId: string, offset: string): Promise<any> {
   try {
     // First step - get the orders
     console.log(`Starting Mirakl process with domain: ${domain}, storeId: ${storeId}, offset: ${offset}`);
-    const orders = await get900Orders(domain, apiKey, offset);
+    const miraklOrders = await get900Orders(domain, apiKey, offset);
     
     // Safety check
-    if (!Array.isArray(orders)) {
-      console.error('Orders is not an array:', typeof orders);
-      throw new Error(`Invalid orders data format: ${typeof orders}`);
+    if (!Array.isArray(miraklOrders)) {
+      console.error('Orders is not an array:', typeof miraklOrders);
+      throw new Error(`Invalid orders data format: ${typeof miraklOrders}`);
     }
     
-    console.log(`Retrieved ${orders.length} orders from Mirakl`);
+    console.log(`Retrieved ${miraklOrders.length} orders from Mirakl`);
     
     // If no orders found, return early
-    if (orders.length === 0) {
+    if (miraklOrders.length === 0) {
       return {
         success: true,
         message: "No orders found to process",
@@ -355,38 +421,34 @@ export async function handleMiraklProcessFor900Products(domain: string, apiKey: 
       };
     }
     
-    // Second step - parse the orders into products
-    const products = await parseOrders(orders, ownerUserId, storeId);
+    // Second step - parse the orders into orders
+    const [supabaseOrders, supabaseCustomers] = await parseOrders(miraklOrders, ownerUserId, storeId);
     
-    // If no products were created, return early
-    if (products.length === 0) {
-      return {
-        success: true,
-        message: "No products were created from orders",
-        count: 0
-      };
-    }
-    
-    // Third step - insert products into the database
+      // Third step - insert orders into the database
     try {
-      const result = await updateProducts(products);
+      const customersResult = await updateCustomers(supabaseCustomers);
+      const insertedCustomersCount = customersResult?.count || 0;
+      console.log(`Successfully processed ${insertedCustomersCount} customers out of ${supabaseCustomers.length} customers`);
+      if (insertedCustomersCount === 0) {
+        console.log("No customers were created from mirakl orders");
+      }
+      const result = await updateOrders(supabaseOrders);
       const insertedCount = result?.count || 0;
-      console.log(`Successfully processed ${insertedCount} out of ${products.length} products`);
-      
+      console.log(`Successfully processed ${insertedCount} out of ${supabaseOrders.length} orders`);
       return {
         success: true,
-        message: `Processed ${insertedCount} products`,
-        totalOrders: orders.length,
-        totalProducts: products.length,
-        insertedProducts: insertedCount
+        message: `Processed ${insertedCount} orders`,
+        totalMiraklOrders: miraklOrders.length,
+        totalSupabaseOrders: supabaseOrders.length,
+        insertedOrders: insertedCount
       };
     } catch (dbError) {
       if (dbError.message && dbError.message.includes('unique constraint')) {
         console.log('Handling unique constraint violation');
-        // The error is already logged in updateProducts
+        // The error is already logged in updateOrders
         return {
           success: false,
-          message: "Duplicate SKUs detected",
+          message: "Duplicate commercial ids detected",
           error: dbError.message
         };
       } else {
@@ -422,4 +484,4 @@ export async function getUserIdDomainAndApiKey(storeId: string, supabaseClient: 
   }
 
   return { userId: store.user_id, apiKey: store.api_key, domain: store.domain };
-} 
+}

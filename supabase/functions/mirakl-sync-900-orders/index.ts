@@ -2,7 +2,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders } from '../_shared/cors.ts';
-import { handleMiraklProcessFor900Products} from '../_shared/mirakl.ts';
+import { handleMiraklProcessFor900Orders} from '../_shared/mirakl-orders.ts';
 import { getUserIdDomainAndApiKey } from '../_shared/stores.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
@@ -71,7 +71,7 @@ serve(async (req) => {
     const { userId, apiKey, domain } = userIdAndApiKey;
 
     // Call the Mirakl process function
-    const result = await handleMiraklProcessFor900Products(domain, apiKey, storeId, userId, offset);
+    const result = await handleMiraklProcessFor900Orders(domain, apiKey, storeId, userId, offset);
 
     return new Response(JSON.stringify(result), {
       status: 200,

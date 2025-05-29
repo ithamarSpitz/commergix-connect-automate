@@ -175,57 +175,26 @@ export async function parseOffers(offers: any[], owner_user_id: string, store_id
   
   for (const offer of offers) {
     const product = {
-      id: crypto.randomUUID(),
-      sku: offer.product_sku,
+      shop_sku: offer.shop_sku,
+      provider_sku: offer.product_sku,
       title: offer.product_title,
       description: offer.product_description,
-      //category: offer.category_label,
-      //brand: offer.product_brand,
+      reference: offer.product_references[0]?.reference || '',
+      category: offer.category_label,
+      brand: offer.product_brand,
       price: offer.total_price,
       currency: offer.currency_iso_code,
       is_shared: false,
-      created_at: new Date(), // Use current timestamp
-      updated_at: new Date(), // Use current timestamp
+      updated_at: new Date(),
       image_url: "",
       inventory: offer.quantity,
       store_id: store_id,
       owner_user_id: owner_user_id
-    };
-    
-    // Track SKUs to detect duplicates
-    if (product.sku) {
-      if (skuMap.has(product.sku)) {
-        // This is a duplicate SKU
-        if (!duplicateSkus.has(product.sku)) {
-          // First time seeing this duplicate, initialize count to 1 (for the original)
-          duplicateSkus.set(product.sku, 1);
-        }
-        // Increment the count
-        duplicateSkus.set(product.sku, duplicateSkus.get(product.sku) + 1);
-      } else {
-        skuMap.set(product.sku, product);
-      }
-    }
-    
+    };    
     products.push(product);
   }
   
   console.log(`Parsed ${products.length} products from offers`);
-  
-  // Log duplicate SKUs if there are any
-  if (duplicateSkus.size > 0) {
-    console.log(`------ FOUND ${duplicateSkus.size} DUPLICATE SKUs ------`);
-    for (const [sku, count] of duplicateSkus.entries()) {
-      console.log(`SKU: ${sku} appears ${count + 1} times`); // +1 because we count the original as well
-      
-      // Find and log all products with this SKU for debugging
-      const productsWithThisSku = products.filter(p => p.sku === sku);
-      console.log(`Products with SKU ${sku}:`, JSON.stringify(productsWithThisSku, null, 2));
-    }
-    console.log(`------ END OF DUPLICATE SKUs ------`);
-  } else {
-    console.log('No duplicate SKUs found.');
-  }
   
   return products;
 }
@@ -237,26 +206,46 @@ export async function parseOffers(offers: any[], owner_user_id: string, store_id
  */
 function deduplicateProducts(products: any[]): any[] {
   const skuSet = new Set<string>();
+  const referenceSet = new Set<string>();
+  const referenceDuplicates: string[] = [];
   const skuDuplicates: string[] = [];
   
   // Find duplicate SKUs
   for (const product of products) {
-    if (skuSet.has(product.sku)) {
-      skuDuplicates.push(product.sku);
+    if (skuSet.has(product.shop_sku)) {
+      skuDuplicates.push(product.shop_sku);
     } else {
-      skuSet.add(product.sku);
+      skuSet.add(product.shop_sku);
+    }
+    if (referenceSet.has(product.reference)) {
+      referenceDuplicates.push(product.reference);
+    } else {
+      referenceSet.add(product.reference);
     }
   }
   
   if (skuDuplicates.length > 0) {
     console.error(`Found ${skuDuplicates.length} duplicate SKUs within the products array`);
     console.log('Duplicate SKUs:', skuDuplicates);
+  
+  if (referenceDuplicates.length > 0) {
+    console.error(`Found ${referenceDuplicates.length} duplicate references within the products array`);
+    console.log('Duplicate references:', referenceDuplicates);
+  }
     
     // Keep only first occurrence of each SKU
     const uniqueProducts = products.filter((product, index, self) => 
-      index === self.findIndex(p => p.sku === product.sku)
+      index === self.findIndex(p => p.shop_sku === product.shop_sku)
     );
-    console.log(`Filtered out ${products.length - uniqueProducts.length} duplicate products`);
+    console.log(`Filtered out ${products.length - uniqueProducts.length} duplicate products by SKU`);
+
+    //keep only first occurrence of each reference
+    const uniqueProductsByReference = uniqueProducts.filter((product, index, self) => 
+      index === self.findIndex(p => p.reference === product.reference)
+    );
+    console.log(`Filtered out ${uniqueProducts.length - uniqueProductsByReference.length} duplicate products by reference`);
+    console.log(`Final unique products count: ${uniqueProductsByReference.length}`);
+    // Return the unique products
     return uniqueProducts;
   }
   
@@ -302,15 +291,11 @@ export async function updateProducts(products: any[]): Promise<any> {
     const { data, error } = await supabaseClient
       .from('products')
       .upsert(uniqueProducts, {
-        onConflict: 'owner_user_id,sku', // Specify the constraint columns
+        onConflict: 'owner_user_id,shop_sku', // Specify the constraint columns
         ignoreDuplicates: false // Update existing rows instead of ignoring
       });
     
     if (error) {
-      console.log('Error with products upsert. First few products:');
-      uniqueProducts.slice(0, 5).forEach((product, index) => {
-        console.log(`Product ${index}: SKU=${product.sku}, ID=${product.id}`);
-      });
       console.error('Error upserting products:', error);
       throw new Error(`Failed to upsert products: ${error.message}`);
     }
