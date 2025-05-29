@@ -47,24 +47,22 @@ export const useDashboardData = () => {
             throw new Error("Failed to fetch products count");
           }
           
-          // Count total orders - filtered by store.user_id through join
-          const { data: orderData, error: orderError } = await supabaseClient
+          // Count total orders - filtered by owner_user_id directly (not through stores)
+          const { count: orderCount, error: orderError } = await supabaseClient
             .from('orders')
-            .select('id, total_amount, store:stores!inner(user_id)')
-            .eq('store.user_id', user.id);
+            .select('*', { count: 'exact', head: true })
+            .eq('owner_user_id', user.id);
             
           if (orderError) {
             console.error("Error fetching order count:", orderError);
             throw new Error("Failed to fetch orders count");
           }
           
-          const orderCount = orderData?.length || 0;
-          
-          // Count pending orders - also filtered by store.user_id
-          const { data: pendingOrderData, error: pendingOrderError } = await supabaseClient
+          // Count pending orders - also filtered by owner_user_id
+          const { count: pendingOrderCount, error: pendingOrderError } = await supabaseClient
             .from('orders')
-            .select('id, store:stores!inner(user_id)')
-            .eq('store.user_id', user.id)
+            .select('*', { count: 'exact', head: true })
+            .eq('owner_user_id', user.id)
             .eq('status', 'processing');
             
           if (pendingOrderError) {
@@ -72,7 +70,16 @@ export const useDashboardData = () => {
             throw new Error("Failed to fetch pending orders count");
           }
           
-          const pendingOrderCount = pendingOrderData?.length || 0;
+          // Fetch orders for revenue calculation - also filtered by owner_user_id
+          const { data: orderData, error: orderDataError } = await supabaseClient
+            .from('orders')
+            .select('total_amount')
+            .eq('owner_user_id', user.id);
+            
+          if (orderDataError) {
+            console.error("Error fetching order data for revenue:", orderDataError);
+            throw new Error("Failed to fetch order data for revenue calculation");
+          }
           
           // Calculate total revenue from the filtered orders
           const totalRevenue = orderData?.reduce((sum, order) => 
@@ -80,11 +87,12 @@ export const useDashboardData = () => {
           
           const dashboardStats = {
             totalProducts: productCount || 0,
-            totalOrders: orderCount,
-            pendingOrders: pendingOrderCount,
+            totalOrders: orderCount || 0,
+            pendingOrders: pendingOrderCount || 0,
             revenue: totalRevenue,
           };
           
+          console.log("Dashboard stats:", dashboardStats);
           setStats(dashboardStats);
           
           // Check if user has any data
