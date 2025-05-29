@@ -16,9 +16,9 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const useStoreSync = () => {
-  // Function to sync products from a store
-  const syncProducts = async (store: Store): Promise<SyncResponse> => {
-    console.log('[Sync] Starting product sync for store:', store.store_name);
+  // Function to sync items from a store
+  const syncItems = async (store: Store): Promise<SyncResponse> => {
+    console.log('[Sync] Starting item sync for store:', store.store_name);
     
     // Check if store has required credentials based on platform
     if (!store) {
@@ -48,7 +48,10 @@ export const useStoreSync = () => {
           syncedItems = syncResult.syncedItems || 0;
           break;
         case "mirakl":
-          syncResult = await syncMiraklProducts(store);
+          syncResult = await syncMiraklItems(store, 'offers');
+          syncResult = await syncMiraklItems(store, 'orders');
+
+
           syncedItems = syncResult.syncedItems || 0;
           break;
         default:
@@ -60,19 +63,19 @@ export const useStoreSync = () => {
       }
 
       // Log the sync activity
-      console.log('[Sync] Product sync completed with result:', syncResult);
+      console.log('[Sync] items sync completed with result:', syncResult);
       
       await createSyncLog({
         user_id: store.user_id,
         type: 'products',
-        details: `Synced ${syncedItems} products from ${store.store_name}`,
+        details: `Synced ${syncedItems} items from ${store.store_name}`,
         status: syncResult.success ? 'success' : 'error',
         related_id: store.id
       });
 
       return syncResult;
     } catch (error) {
-      console.error("[Sync] Product sync error:", error);
+      console.error("[Sync] item sync error:", error);
       
       // Log the sync error
       await createSyncLog({
@@ -85,7 +88,7 @@ export const useStoreSync = () => {
 
       return { 
         success: false, 
-        message: `Failed to sync products: ${error.message}` 
+        message: `Failed to sync items: ${error.message}` 
       };
     }
   };
@@ -243,32 +246,28 @@ export const useStoreSync = () => {
     console.log('[Sync] Starting full sync for store:', store.store_name, store);
     
     try {
-      // Only sync products for now, as the other sync functions are placeholders
-      console.log('[Sync] Calling product sync function');
-      const productsResult = await syncProducts(store);
-      console.log('[Sync] Product sync result:', productsResult);
-      
-      // Log detailed info about any placeholder functions
-      console.log('[Sync] Note: Orders and inventory sync are currently placeholder implementations');
+      console.log('[Sync] Calling mirakl items sync function');
+      const itemsResult = await syncItems(store);
+      console.log('[Sync] items sync result:', itemsResult);
       
       // Create a summary log entry for the entire sync operation
       await createSyncLog({
         user_id: store.user_id,
         type: 'products', // Default to products since that's what we're actually syncing
         details: `Completed full sync for ${store.store_name}`,
-        status: productsResult.success ? 'success' : 'error',
+        status: itemsResult.success ? 'success' : 'error',
         related_id: store.id
       });
 
-      console.log('[Sync] Full sync completed with success:', productsResult.success);
+      console.log('[Sync] Full sync completed with success:', itemsResult.success);
       
       return {
-        success: productsResult.success,
-        message: productsResult.success ? 
+        success: itemsResult.success,
+        message: itemsResult.success ? 
           "Successfully synchronized store data" : 
           "Failed to synchronize some store data",
         data: {
-          products: productsResult
+          products: itemsResult
         }
       };
     } catch (error) {
@@ -468,8 +467,8 @@ export const useStoreSync = () => {
     }
   };
   // Platform-specific implementation for Mirakl
-  const syncMiraklProducts = async (store: Store): Promise<SyncResponse> => {
-    console.log('[Sync] Starting Mirakl products sync for store:', store.store_name);
+  const syncMiraklItems = async (store: Store, items: string): Promise<SyncResponse> => {
+    console.log(`[Sync] Starting Mirakl ${items} sync for store:`, store.store_name);
 
     try {      if (!store.domain || !store.api_key) {
         console.error('[Sync] Missing Mirakl credentials for store:', store.store_name);
@@ -478,28 +477,28 @@ export const useStoreSync = () => {
 
       console.log('[Sync] Using Edge Function proxy for Mirakl API call with fullSync=true');
 
-      //call getOffersCount function below to get the number of offers in Mirakl
-      const countResponse = await getOffersCount(store.id);
+      //call getItemssCount function below to get the number of items(offers/orders) in Mirakl
+      const countResponse = await getItemsCount(store.id, items);
       if (!countResponse) {
-        console.error('[Sync] Error getting offers count:');
-        return { success: false, message: `Error getting offers count` };
+        console.error(`[Sync] Error getting ${items} count:`);
+        return { success: false, message: `Error getting ${items} count` };
       }
-      const totalOffers = countResponse || 0;
-      console.log('[Sync] Total offers in Mirakl:', totalOffers);
-      if (totalOffers === 0) {
-        console.log('[Sync] No offers to sync from Mirakl');
-        return { success: true, message: "No offers to sync from Mirakl", syncedItems: 0 };
+      const totalItems = countResponse || 0;
+      console.log(`[Sync] Total ${items} in Mirakl:`, totalItems);
+      if (totalItems === 0) {
+        console.log(`[Sync] No ${items} to sync from Mirakl`);
+        return { success: true, message: `No ${items} to sync from Mirakl`, syncedItems: 0 };
       }
   
       // Sync in batches of 900
-      const batchCount = Math.ceil(totalOffers / 900);
+      const batchCount = Math.ceil(totalItems / 900);
       for (let i = 0; i < batchCount; i++) {
         const offset = (i * 900).toString();
         console.log(`[Sync] Syncing batch ${i + 1} of ${batchCount} with offset ${offset}`);
-        const syncResponse = await sync900MiraklProducts(store.id, offset);
+        const syncResponse = await sync900MiraklItems(store.id, offset, items);
         if (!syncResponse) {
-          console.error('[Sync] Error syncing products from Mirakl:');
-          return { success: false, message: `Error syncing products from Mirakl` };
+          console.error(`[Sync] Error syncing ${items} from Mirakl:`);
+          return { success: false, message: `Error syncing ${items} from Mirakl` };
         }
         if (i === batchCount - 1) {
           console.log('[Sync] Last batch synced successfully'); 
@@ -509,17 +508,17 @@ export const useStoreSync = () => {
         }
       }
       
-      console.log('[Sync] Successfully synced products from Mirakl');
+      console.log(`[Sync] Successfully synced ${items} from Mirakl`);
       return {
         success: true,
-        message: `Successfully synced products from Mirakl`,
-        syncedItems: totalOffers
+        message: `Successfully synced ${items} from Mirakl`,
+        syncedItems: totalItems
       };
     } catch (error) { 
-      console.error("[Sync] Mirakl product sync error:", error);
+      console.error("[Sync] Mirakl item sync error:", error);
       return {
         success: false,
-        message: `Failed to sync Mirakl products: ${error.message}`
+        message: `Failed to sync Mirakl ${items}: ${error.message}`
       };
     }
 
@@ -572,16 +571,16 @@ export const useStoreSync = () => {
   };
 
   return {
-    syncProducts,
+    syncItems,
     syncOrders,
     syncInventory,
     syncAll
   };
 };
 
-// function that returns the number of offers in Mirakl
-const getOffersCount = async (storeId: string): Promise<number> => {
-        const getCountFunctionUrl = `${supabaseUrl}/functions/v1/mirakl-count-offers`;
+// function that returns the number of items in Mirakl
+const getItemsCount = async (storeId: string, items: string): Promise<number> => {
+        const getCountFunctionUrl = `${supabaseUrl}/functions/v1/mirakl-count-${items}`;
 
   const response = await fetch(getCountFunctionUrl, {
           method: "POST",
@@ -596,17 +595,17 @@ const getOffersCount = async (storeId: string): Promise<number> => {
         });
 
   if (!response.ok) {
-    throw new Error(`Error fetching offers count: ${response.statusText}`);
+    throw new Error(`Error fetching ${items} count: ${response.statusText}`);
   }
 
   const data = await response.json();
-  console.log('Offers count response:', data);
+  console.log(items, ' count response:', data);
   return data.count;
 }
 
-// function that syncs up to 900 products from Mirakl
-const sync900MiraklProducts = async (storeId: string, offset: string): Promise<SyncResponse> => {
-  const syncFunctionUrl = `${supabaseUrl}/functions/v1/mirakl-sync-900`;
+// function that syncs up to 900 items from Mirakl
+const sync900MiraklItems = async (storeId: string, offset: string, items: string): Promise<SyncResponse> => {
+  const syncFunctionUrl = `${supabaseUrl}/functions/v1/mirakl-sync-900-${items}`;
   const response = await fetch(syncFunctionUrl, {
     method: "POST",
     headers: {
@@ -621,7 +620,7 @@ const sync900MiraklProducts = async (storeId: string, offset: string): Promise<S
   });
 
   if (!response.ok) {
-    throw new Error(`Error syncing products: ${response.statusText}`);
+    throw new Error(`Error syncing ${items}: ${response.statusText}`);
   }
 
   const data = await response.json();
