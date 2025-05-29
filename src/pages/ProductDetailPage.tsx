@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,8 @@ const ProductDetailPage = () => {
     title: "Classic White T-Shirt",
     description: "High-quality cotton t-shirt with classic fit and comfortable feel. Perfect for everyday wear and easy to match with any outfit.",
     price: 19.99,
-    sku: "TS-001",
+    shop_sku: "TS-001",
+    provider_sku: "TS-001",
     inventory: 45,
     imageUrl: "/placeholder.svg", // Use local placeholder image instead of external service
   });
@@ -52,7 +54,8 @@ const ProductDetailPage = () => {
             title: data.title,
             description: data.description,
             price: data.price,
-            sku: data.sku,
+            shop_sku: data.shop_sku,
+            provider_sku: data.provider_sku,
             inventory: data.inventory,
             imageUrl: data.image_url, // Map image_url to imageUrl
           });
@@ -155,7 +158,8 @@ const ProductDetailPage = () => {
         title: product.title,
         description: product.description,
         price: product.price,
-        sku: product.sku,
+        shop_sku: product.shop_sku,
+        provider_sku: product.provider_sku,
         inventory: product.inventory,
         image_url: finalImageUrl, // Use image_url for database
         is_shared: isShared
@@ -248,10 +252,10 @@ const ProductDetailPage = () => {
                       />
                     </div>
                     <div>
-                      <label htmlFor="sku" className="block text-sm font-medium mb-1">SKU</label>
+                      <label htmlFor="shop_sku" className="block text-sm font-medium mb-1">SKU</label>
                       <Input 
-                        id="sku" 
-                        value={product.sku}
+                        id="shop_sku" 
+                        value={product.shop_sku}
                         onChange={handleInputChange}
                       />
                     </div>

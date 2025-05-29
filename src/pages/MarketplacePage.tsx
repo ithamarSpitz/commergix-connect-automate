@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,10 +43,15 @@ const MarketplacePage = () => {
             image_url, 
             owner_user_id,
             is_shared,
-            sku,
+            shop_sku,
+            provider_sku,
             inventory,
             created_at,
-            store_id
+            store_id,
+            reference,
+            category,
+            brand,
+            updated_at
           `)
           .eq('is_shared', true);
           
@@ -53,7 +59,7 @@ const MarketplacePage = () => {
         
         // Fetch user details for all owner_user_ids in the products
         if (productsData && productsData.length > 0) {
-          const ownerIds = [...new Set(productsData.map(product => product.owner_user_id))];
+          const ownerIds = [...new Set(productsData.map(product => product.owner_user_id).filter(Boolean))];
           
           const { data: usersData, error: usersError } = await supabase
             .from('users')
@@ -91,10 +97,15 @@ const MarketplacePage = () => {
             image_url, 
             owner_user_id,
             is_shared,
-            sku,
+            shop_sku,
+            provider_sku,
             inventory,
             created_at,
-            store_id
+            store_id,
+            reference,
+            category,
+            brand,
+            updated_at
           `)
           .eq('is_shared', true)
           .eq('owner_user_id', user?.id);

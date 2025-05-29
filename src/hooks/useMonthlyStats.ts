@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -70,12 +71,12 @@ export function useMonthlyStats(): MonthlyStats {
         // Calculate current month stats
         const currentOrderCount = currentMonthData?.length || 0;
         const currentRevenue = currentMonthData?.reduce((sum, order) => 
-          sum + (parseFloat(order.total_amount) || 0), 0) || 0;
+          sum + (parseFloat(order.total_amount.toString()) || 0), 0) || 0;
 
         // Calculate previous month stats
         const prevOrderCount = previousMonthData?.length || 0;
         const prevRevenue = previousMonthData?.reduce((sum, order) => 
-          sum + (parseFloat(order.total_amount) || 0), 0) || 0;
+          sum + (parseFloat(order.total_amount.toString()) || 0), 0) || 0;
 
         // Calculate percentage changes
         const orderCountChange = prevOrderCount === 0 

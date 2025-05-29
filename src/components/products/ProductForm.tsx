@@ -41,7 +41,7 @@ export const ProductForm = ({ open, setOpen, onAddProduct }: ProductFormProps) =
     defaultValues: {
       title: "",
       price: "",
-      sku: "",
+      shop_sku: "",
       inventory: "",
       description: "",
       is_shared: false,
@@ -57,7 +57,8 @@ export const ProductForm = ({ open, setOpen, onAddProduct }: ProductFormProps) =
         id: `${Date.now()}`, // This will be replaced by Supabase
         title: data.title,
         price: parseFloat(data.price),
-        sku: data.sku,
+        shop_sku: data.shop_sku,
+        provider_sku: data.shop_sku, // Use the same value for both
         inventory: parseInt(data.inventory),
         is_shared: data.is_shared,
         image_url: "https://via.placeholder.com/150",
@@ -66,6 +67,10 @@ export const ProductForm = ({ open, setOpen, onAddProduct }: ProductFormProps) =
         store_id: null,
         currency: "USD",
         created_at: new Date().toISOString(),
+        updated_at: null,
+        reference: null,
+        category: null,
+        brand: null,
       };
       
       // Add the new product
@@ -125,7 +130,7 @@ export const ProductForm = ({ open, setOpen, onAddProduct }: ProductFormProps) =
             />
             <FormField
               control={form.control}
-              name="sku"
+              name="shop_sku"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>SKU</FormLabel>
