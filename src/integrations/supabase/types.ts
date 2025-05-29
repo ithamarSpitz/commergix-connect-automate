@@ -9,6 +9,39 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      customers: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          external_id: string
+          first_name: string
+          id: string
+          last_name: string
+          phone_number: number
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          external_id: string
+          first_name: string
+          id?: string
+          last_name: string
+          phone_number: number
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          external_id?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone_number?: number
+        }
+        Relationships: []
+      }
       inventory: {
         Row: {
           product_id: string
@@ -100,48 +133,77 @@ export type Database = {
       }
       orders: {
         Row: {
-          buyer_email: string
-          buyer_name: string
+          billing_address: string | null
+          commercial_id: string
+          commission: number | null
           created_at: string
           currency: string
-          external_order_id: string
+          customer_id: string
           id: string
           order_date: string
+          owner_user_id: string
+          provider_order_id: string
           raw_data: Json | null
+          recieved_date: string | null
           shipping_address: Json
+          shipping_date: string | null
           status: string
           store_id: string | null
           total_amount: number
         }
         Insert: {
-          buyer_email: string
-          buyer_name: string
+          billing_address?: string | null
+          commercial_id: string
+          commission?: number | null
           created_at?: string
           currency?: string
-          external_order_id: string
+          customer_id: string
           id?: string
           order_date: string
+          owner_user_id?: string
+          provider_order_id: string
           raw_data?: Json | null
+          recieved_date?: string | null
           shipping_address: Json
+          shipping_date?: string | null
           status: string
           store_id?: string | null
           total_amount: number
         }
         Update: {
-          buyer_email?: string
-          buyer_name?: string
+          billing_address?: string | null
+          commercial_id?: string
+          commission?: number | null
           created_at?: string
           currency?: string
-          external_order_id?: string
+          customer_id?: string
           id?: string
           order_date?: string
+          owner_user_id?: string
+          provider_order_id?: string
           raw_data?: Json | null
+          recieved_date?: string | null
           shipping_address?: Json
+          shipping_date?: string | null
           status?: string
           store_id?: string | null
           total_amount?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["external_id"]
+          },
+          {
+            foreignKeyName: "orders_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_store_id_fkey"
             columns: ["store_id"]
@@ -153,6 +215,8 @@ export type Database = {
       }
       products: {
         Row: {
+          brand: string | null
+          category: string | null
           created_at: string
           currency: string
           description: string | null
@@ -162,11 +226,16 @@ export type Database = {
           is_shared: boolean
           owner_user_id: string | null
           price: number
-          sku: string
+          provider_sku: string
+          reference: string | null
+          shop_sku: string
           store_id: string | null
           title: string
+          updated_at: string | null
         }
         Insert: {
+          brand?: string | null
+          category?: string | null
           created_at?: string
           currency?: string
           description?: string | null
@@ -176,11 +245,16 @@ export type Database = {
           is_shared?: boolean
           owner_user_id?: string | null
           price: number
-          sku: string
+          provider_sku: string
+          reference?: string | null
+          shop_sku: string
           store_id?: string | null
           title: string
+          updated_at?: string | null
         }
         Update: {
+          brand?: string | null
+          category?: string | null
           created_at?: string
           currency?: string
           description?: string | null
@@ -190,9 +264,12 @@ export type Database = {
           is_shared?: boolean
           owner_user_id?: string | null
           price?: number
-          sku?: string
+          provider_sku?: string
+          reference?: string | null
+          shop_sku?: string
           store_id?: string | null
           title?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -316,7 +393,6 @@ export type Database = {
           plan_type: string
           profile_description: string | null
           role: string
-          stripe_customer_id: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -326,7 +402,6 @@ export type Database = {
           plan_type?: string
           profile_description?: string | null
           role?: string
-          stripe_customer_id?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -336,7 +411,6 @@ export type Database = {
           plan_type?: string
           profile_description?: string | null
           role?: string
-          stripe_customer_id?: string | null
         }
         Relationships: []
       }
