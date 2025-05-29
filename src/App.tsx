@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +17,7 @@ import ProductDetailPage from "./pages/ProductDetailPage";
 import MarketplacePage from "./pages/MarketplacePage";
 import OrdersPage from "./pages/OrdersPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
+import CustomersPage from "./pages/CustomersPage";
 import SettingsPage from "./pages/SettingsPage";
 import ConnectionsPage from "./pages/settings/ConnectionsPage";
 import ShippingPage from "./pages/settings/ShippingPage";
@@ -24,7 +26,7 @@ import ProfilePage from "./pages/settings/ProfilePage";
 import AdminPage from "./pages/AdminPage";
 import NotFound from "./pages/NotFound";
 import AuthCallback from "./pages/AuthCallback";
-import ShopifyCallback from "./pages/ShopifyCallback"; // Import ShopifyCallback
+import ShopifyCallback from "./pages/ShopifyCallback";
 import ReportsPage from "@/pages/ReportsPage";
 
 // Auth-protected route wrapper
@@ -52,7 +54,7 @@ const App = () => {
               {/* Public routes */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/shopify/callback" element={<ShopifyCallback />} /> {/* Add ShopifyCallback route */}
+              <Route path="/shopify/callback" element={<ShopifyCallback />} />
 
               {/* Authenticated Routes */}
               <Route element={<ProtectedRoute />}>
@@ -66,6 +68,7 @@ const App = () => {
                   <Route path="/marketplace" element={<MarketplacePage />} />
                   <Route path="/orders" element={<OrdersPage />} />
                   <Route path="/orders/:id" element={<OrderDetailPage />} />
+                  <Route path="/customers" element={<CustomersPage />} />
 
                   <Route path="/settings/*" element={<SettingsPage />}>
                     <Route index element={<Navigate to="/settings/profile" replace />} />

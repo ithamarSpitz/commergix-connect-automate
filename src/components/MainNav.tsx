@@ -1,4 +1,3 @@
-
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import {
   ShoppingCart,
   Store,
   Users,
+  UserCheck,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
@@ -42,6 +42,11 @@ const navItems: NavItem[] = [
     title: "Orders",
     href: "/orders",
     icon: ShoppingCart,
+  },
+  {
+    title: "Customers",
+    href: "/customers",
+    icon: UserCheck,
   },
   {
     title: "Reports",
