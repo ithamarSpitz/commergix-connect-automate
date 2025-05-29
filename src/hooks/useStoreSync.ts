@@ -387,7 +387,7 @@ export const useStoreSync = () => {
       console.log('[Sync] Fetched products count:', products.length);
 
       // Process and save products to the database
-      const productPromises = products.map(async ({ node }) => {
+      const productPromises = products.map(async ({ node }: any) => {
         const variant = node.variants.edges[0]?.node;
         const imageUrl = node.images.edges[0]?.node?.originalSrc;
         
@@ -397,7 +397,7 @@ export const useStoreSync = () => {
           .from('products')
           .select('*')
           .eq('store_id', store.id)
-          .eq('external_product_id', node.id);
+          .eq('reference', node.id);
           
         if (queryError) {
           console.error('[Sync] Error querying product:', queryError);
@@ -413,7 +413,7 @@ export const useStoreSync = () => {
               title: node.title,
               description: node.description || '',
               price: parseFloat(variant?.price || '0'),
-              sku: variant?.sku || '',
+              shop_sku: variant?.sku || '',
               image_url: imageUrl,
               inventory: variant?.inventoryQuantity || 0,
               updated_at: new Date().toISOString()
@@ -432,12 +432,13 @@ export const useStoreSync = () => {
             .insert([{
               owner_user_id: store.user_id,
               store_id: store.id,
-              external_product_id: node.id,
+              reference: node.id,
               title: node.title,
               description: node.description || '',
               price: parseFloat(variant?.price || '0'),
               currency: 'USD', // Default or get from store settings
-              sku: variant?.sku || '',
+              shop_sku: variant?.sku || '',
+              provider_sku: variant?.sku || '',
               is_shared: false,
               image_url: imageUrl,
               inventory: variant?.inventoryQuantity || 0,
@@ -459,7 +460,7 @@ export const useStoreSync = () => {
         message: `Successfully synced ${products.length} products from Shopify`,
         syncedItems: products.length
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("[Sync] Shopify product sync error:", error);
       return {
         success: false,
@@ -471,7 +472,8 @@ export const useStoreSync = () => {
   const syncMiraklProducts = async (store: Store): Promise<SyncResponse> => {
     console.log('[Sync] Starting Mirakl products sync for store:', store.store_name);
 
-    try {      if (!store.domain || !store.api_key) {
+    try {
+      if (!store.domain || !store.api_key) {
         console.error('[Sync] Missing Mirakl credentials for store:', store.store_name);
         return { success: false, message: "Missing Mirakl credentials" };
       }
@@ -515,7 +517,7 @@ export const useStoreSync = () => {
         message: `Successfully synced products from Mirakl`,
         syncedItems: totalOffers
       };
-    } catch (error) { 
+    } catch (error: any) { 
       console.error("[Sync] Mirakl product sync error:", error);
       return {
         success: false,
@@ -581,19 +583,19 @@ export const useStoreSync = () => {
 
 // function that returns the number of offers in Mirakl
 const getOffersCount = async (storeId: string): Promise<number> => {
-        const getCountFunctionUrl = `${supabaseUrl}/functions/v1/mirakl-count-offers`;
+  const getCountFunctionUrl = `${supabaseUrl}/functions/v1/mirakl-count-offers`;
 
   const response = await fetch(getCountFunctionUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            "apikey": SUPABASE_ANON_KEY
-          },
-          body: JSON.stringify({
-            storeId: storeId,
-          })
-        });
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      "apikey": SUPABASE_ANON_KEY
+    },
+    body: JSON.stringify({
+      storeId: storeId,
+    })
+  });
 
   if (!response.ok) {
     throw new Error(`Error fetching offers count: ${response.statusText}`);

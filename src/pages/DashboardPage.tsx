@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { supabaseClient } from "@/hooks/useSupabase";
@@ -74,7 +75,7 @@ const DashboardPage = () => {
           
           // Calculate total revenue from the filtered orders
           const totalRevenue = orderData?.reduce((sum, order) => 
-            sum + (parseFloat(order.total_amount) || 0), 0) || 0;
+            sum + (parseFloat(order.total_amount.toString()) || 0), 0) || 0;
           
           const dashboardStats = {
             totalProducts: productCount || 0,
