@@ -1,5 +1,5 @@
 
-# Commergix
+# commegix
 
 An all-in-one e-commerce & dropshipping automation platform.
 
@@ -46,8 +46,8 @@ An all-in-one e-commerce & dropshipping automation platform.
 
 1. Clone the repository
    ```bash
-   git clone https://github.com/yourusername/commergix.git
-   cd commergix
+   git clone https://github.com/yourusername/commegix.git
+   cd commegix
    ```
 
 2. Install dependencies
