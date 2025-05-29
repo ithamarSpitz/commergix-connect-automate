@@ -22,6 +22,8 @@ const OrdersPage = () => {
     queryFn: async (): Promise<Order[]> => {
       if (!user) return [];
       
+      console.log('Fetching orders for user:', user.id);
+      
       const { data, error } = await supabaseClient
         .from('orders')
         .select('*')
@@ -33,6 +35,7 @@ const OrdersPage = () => {
         throw error;
       }
       
+      console.log('Fetched orders:', data);
       return data || [];
     },
     enabled: !!user,
@@ -135,12 +138,18 @@ const OrdersPage = () => {
         </div>
       </div>
 
-      <DataTable 
-        columns={columns} 
-        data={orders} 
-        searchKey="provider_order_id"
-        searchPlaceholder="Search orders..."
-      />
+      {orders.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          No orders found.
+        </div>
+      ) : (
+        <DataTable 
+          columns={columns} 
+          data={orders} 
+          searchKey="provider_order_id"
+          searchPlaceholder="Search orders..."
+        />
+      )}
     </div>
   );
 };

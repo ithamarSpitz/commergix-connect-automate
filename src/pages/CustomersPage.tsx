@@ -21,26 +21,43 @@ const CustomersPage = () => {
     queryFn: async (): Promise<Customer[]> => {
       if (!user) return [];
       
-      // Get customers through orders that belong to the current user
-      const { data, error } = await supabaseClient
-        .from('customers')
-        .select(`
-          *,
-          orders!inner(owner_user_id)
-        `)
-        .eq('orders.owner_user_id', user.id);
+      console.log('Fetching customers for user:', user.id);
+      
+      // First, get all customer IDs from orders that belong to this user
+      const { data: orderCustomers, error: orderError } = await supabaseClient
+        .from('orders')
+        .select('customer_id')
+        .eq('owner_user_id', user.id);
         
-      if (error) {
-        console.error('Error fetching customers:', error);
-        throw error;
+      if (orderError) {
+        console.error('Error fetching order customers:', orderError);
+        throw orderError;
       }
       
-      // Remove duplicates based on customer id
-      const uniqueCustomers = data?.filter((customer, index, self) => 
-        index === self.findIndex(c => c.id === customer.id)
-      ) || [];
+      console.log('Found order customers:', orderCustomers);
       
-      return uniqueCustomers;
+      if (!orderCustomers || orderCustomers.length === 0) {
+        console.log('No orders found for user, returning empty customers list');
+        return [];
+      }
+      
+      // Get unique customer IDs
+      const customerIds = [...new Set(orderCustomers.map(order => order.customer_id))];
+      console.log('Unique customer IDs:', customerIds);
+      
+      // Now fetch the actual customer data
+      const { data: customersData, error: customersError } = await supabaseClient
+        .from('customers')
+        .select('*')
+        .in('external_id', customerIds);
+        
+      if (customersError) {
+        console.error('Error fetching customers:', customersError);
+        throw customersError;
+      }
+      
+      console.log('Fetched customers data:', customersData);
+      return customersData || [];
     },
     enabled: !!user,
   });
@@ -137,7 +154,7 @@ const CustomersPage = () => {
 
       {customers.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
-          No customers found.
+          No customers found. Customers will appear here when you have orders.
         </div>
       ) : (
         <DataTable 
