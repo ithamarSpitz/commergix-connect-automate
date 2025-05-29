@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabaseClient } from './useSupabase';
 import { useToast } from "@/hooks/use-toast";
@@ -41,8 +42,6 @@ export function useMiraklAuth() {
 
       console.log('Mirakl connection response:', {
         data: response.data,
-        status: response.status,
-        statusText: response.statusText,
         error: response.error ? { message: response.error.message, name: response.error.name } : null
       });
 

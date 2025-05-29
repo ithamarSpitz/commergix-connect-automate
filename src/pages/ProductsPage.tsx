@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -74,7 +75,8 @@ const ProductsPage = () => {
           description: newProduct.description,
           price: newProduct.price,
           currency: newProduct.currency,
-          sku: newProduct.sku,
+          shop_sku: newProduct.shop_sku,
+          provider_sku: newProduct.provider_sku,
           is_shared: newProduct.is_shared,
           image_url: newProduct.image_url,
           owner_user_id: user.id, // Always use current user's ID

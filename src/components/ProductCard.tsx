@@ -1,3 +1,4 @@
+
 import { Product } from "@/types";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,7 @@ export function ProductCard({ product, isMarketplace = false, onImport }: Produc
             {formatCurrency(product.price, product.currency)}
           </p>
           <p className="text-sm text-muted-foreground">
-            SKU: {product.sku}
+            SKU: {product.shop_sku}
           </p>
         </div>
         <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">

@@ -1,3 +1,4 @@
+
 import { Product } from "@/types";
 import { ProductCard } from "@/components/ProductCard";
 
@@ -11,7 +12,7 @@ export const ProductList = ({ products, searchQuery }: ProductListProps) => {
   const filteredProducts = searchQuery
     ? products.filter(product =>
         product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.sku.toLowerCase().includes(searchQuery.toLowerCase())
+        product.shop_sku.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : products;
     

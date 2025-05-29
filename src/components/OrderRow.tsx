@@ -31,11 +31,11 @@ export function OrderRow({ order }: OrderRowProps) {
     <TableRow>
       <TableCell className="font-medium">
         <Link to={`/orders/${order.id}`} className="hover:underline text-primary">
-          #{order.external_order_id}
+          #{order.provider_order_id}
         </Link>
       </TableCell>
       <TableCell>{formatDate(order.order_date)}</TableCell>
-      <TableCell>{order.buyer_name}</TableCell>
+      <TableCell>{order.commercial_id}</TableCell>
       <TableCell className="text-right">
         {formatCurrency(order.total_amount, order.currency)}
       </TableCell>
